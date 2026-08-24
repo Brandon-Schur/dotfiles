@@ -132,108 +132,63 @@ scoop install nodejs  OR  winget install OpenJS.NodeJS
 
 ## Installation
 
-### macOS
+The installer handles **everything** — it installs all dependencies (via Homebrew
+on macOS/Linux, Scoop on Windows) and then links the configs.
+
+### macOS / Linux (one command)
 
 ```bash
-# 1. Install Homebrew
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# 2. Install required tools
-brew install tmux neovim git lazygit
-
-# 3. Install formatters (PATH-required, not Mason-managed)
-brew install prettier sql-formatter
-
-# 4. Install language runtimes for Mason-managed tools
-brew install python openjdk llvm node
-
-# 5. Install a Nerd Font (example: JetBrainsMono)
-brew install --cask font-jetbrains-mono-nerd-font
-# Then set the font in your terminal preferences.
-
-# 6. Clone dotfiles
 git clone https://github.com/Brandon-Schur/dotfiles.git ~/dotfiles
-
-# 7. Run installer
 bash ~/dotfiles/install.sh
 ```
 
-### Linux (Debian/Ubuntu)
+`install.sh` will:
+1. Install Homebrew (if missing)
+2. Install core tools: git, tmux, neovim, lazygit
+3. Install formatters: prettier, sql-formatter
+4. Install language runtimes: python, node, openjdk, llvm/clang
+5. Install the JetBrainsMono Nerd Font
+6. Link the tmux + Neovim + lazygit configs
+7. Install tmux plugins (TPM)
 
+Flags:
 ```bash
-# 1. Install Homebrew (gives latest tmux/nvim without sudo for most packages)
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-# Follow the post-install instructions to add brew to your PATH, then reload shell.
-
-# 2. Install required tools
-brew install tmux neovim git lazygit
-
-# 3. Install formatters (PATH-required)
-brew install prettier sql-formatter
-
-# 4. Install language runtimes
-brew install python node
-sudo apt install default-jdk clang-format   # Java + clang via apt
-
-# 5. Install a Nerd Font
-# Download from https://www.nerdfonts.com, unzip to ~/.local/share/fonts/, then:
-fc-cache -fv
-# Set the font in your terminal emulator preferences.
-
-# 6. Clone dotfiles
-git clone https://github.com/Brandon-Schur/dotfiles.git ~/dotfiles
-
-# 7. Run installer
-bash ~/dotfiles/install.sh
+bash ~/dotfiles/install.sh --no-deps     # link configs only, skip dependency install
+bash ~/dotfiles/install.sh --nvim-only   # deps + Neovim config only
+bash ~/dotfiles/install.sh --tmux-only   # deps + tmux config only
 ```
 
-> **No Homebrew?** Install tmux via `sudo apt install tmux` and Neovim from
-> [official releases](https://github.com/neovim/neovim/releases) (apt version is
-> usually too old — 0.10+ required). Then install prettier/sql-formatter via npm.
+After install, set **JetBrainsMono Nerd Font** as your terminal font.
 
-### Windows (WSL — recommended)
+### Windows (native — PowerShell)
 
-WSL2 gives the best experience; tmux and Neovim work exactly as on Linux:
-
-```powershell
-# 1. Install WSL2 with Ubuntu (PowerShell as Administrator)
-wsl --install
-
-# 2. Open Ubuntu, then follow the Linux instructions above
-```
-
-### Windows (Native — PowerShell)
-
-tmux is not available natively on Windows. Only the Neovim config can be installed.
+tmux is not available on native Windows; use WSL (below) if you want tmux.
+For Neovim only:
 
 ```powershell
-# 1. Install Scoop (package manager)
+# 1. Clone the repo (install Git first if needed: https://git-scm.com/download/win)
+git clone https://github.com/Brandon-Schur/dotfiles.git $HOME\dotfiles
+cd $HOME\dotfiles
+
+# 2. Install ALL dependencies (installs Scoop, git, neovim, lazygit,
+#    node, prettier, sql-formatter, python, openjdk, llvm, and the Nerd Font).
+#    If you hit an execution-policy error, run the Set-ExecutionPolicy line first.
 Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
-irm get.scoop.sh | iex
+.\scripts\install-deps-windows.ps1
 
-# 2. Install required tools
-scoop install neovim git lazygit
-
-# 3. Install Node.js + formatters
-scoop install nodejs
-npm install -g prettier sql-formatter
-
-# 4. Install language runtimes
-scoop install python openjdk llvm
-
-# 5. Install a Nerd Font
-# Download from https://www.nerdfonts.com, double-click the .ttf file to install,
-# then set the font in Windows Terminal settings.
-
-# 6. Clone dotfiles
-git clone https://github.com/Brandon-Schur/dotfiles.git $HOME/dotfiles
-
-# 7. Install Neovim config only (tmux not supported on native Windows)
-bash $HOME/dotfiles/scripts/install-nvim.sh
+# 3. Open a NEW terminal (so PATH updates apply), then link the Neovim config:
+bash scripts\install-nvim.sh
 ```
 
-> On native Windows, Neovim config lives at `%LOCALAPPDATA%\nvim`.
-> The install script symlinks there automatically.
+Then set **JetBrainsMono Nerd Font** in Windows Terminal settings.
+
+### Windows (WSL — recommended for full tmux + nvim)
+
+```powershell
+# In PowerShell as Administrator:
+wsl --install
+# Reboot if prompted, open Ubuntu, then run the macOS/Linux one-liner above.
+```
 
 ---
 
@@ -278,18 +233,50 @@ nvim                         # lazy.nvim auto-installs all plugins on first open
 
 ### Neovim (leader = `Space`)
 
-| Key | Action |
+| Key | Action | Defined in |
+|---|---|---|
+| `Tab` / `Shift-Tab` | Next / previous buffer | `mappings.lua` |
+| `Ctrl-Tab` / `Ctrl-Shift-Tab` | Next / previous buffer | `init.lua` |
+| `Space ←` / `Space →` | Move to left / right window | `mappings.lua` |
+| `Ctrl-C` (visual) | Yank selection to system clipboard | `mappings.lua` |
+| `Space lf` | Format buffer or selection | `formatting.lua` |
+| `Space lF` | Toggle format-on-save (`:AutoFormatToggle`) | `formatting.lua` |
+| `Space gg` | LazyGit (repo) | `lazygit.lua` |
+| `Space gG` | LazyGit (current file's repo) | `lazygit.lua` |
+| `Space gl` | LazyGit: commits for current file | `lazygit.lua` |
+| `Space gd` | Diffview: working tree diff | `diffview.lua` |
+| `Space gD` | Diffview: close | `diffview.lua` |
+| `Space gh` | Diffview: file history (current file / visual selection) | `diffview.lua` |
+| `Space gH` | Diffview: repo history | `diffview.lua` |
+| `Space gv` | CodeDiff: changed files explorer | `codediff.lua` |
+| `Space gV` | CodeDiff: commit history | `codediff.lua` |
+
+---
+
+## Custom config edits (beyond AstroNvim defaults)
+
+Everything below is an intentional customization on top of stock AstroNvim.
+All files live under `nvim/lua/plugins/`.
+
+| File | What it customizes |
 |---|---|
-| `Tab` / `Shift-Tab` | Next / previous buffer |
-| `Space ←` / `Space →` | Move to left / right window |
-| `Ctrl-C` (visual) | Yank to system clipboard |
-| `Space lf` | Format buffer or selection |
-| `Space lF` | Toggle format-on-save |
-| `Space gg` | LazyGit |
-| `Space gd` | Diffview: working tree |
-| `Space gh` | Diffview: file history |
-| `Space gv` | CodeDiff: changed files |
-| `Space gV` | CodeDiff: commit history |
+| `colorscheme.lua` | Sets active colorscheme to `tokyonight-storm` |
+| `tokyonight.lua` | Installs Tokyo Night (style = storm, terminal colors on) |
+| `catppuccin.lua` | Installs Catppuccin (macchiato) as an alternative theme |
+| `mappings.lua` | Tab/Shift-Tab buffers, `Space`+arrows window nav, visual `Ctrl-C` clipboard yank |
+| `clipboard.lua` | Forces OSC 52 clipboard provider (works over SSH/tmux) |
+| `formatting.lua` | conform.nvim: per-filetype formatters, format-on-save + toggle, custom JSONL formatter (`jq`) |
+| `mason.lua` | Auto-installs formatters/LSP: lua-language-server, stylua, black, isort, jq, clang-format, google-java-format, debugpy, tree-sitter-cli |
+| `diffview.lua` | diffview.nvim + `Space g*` keymaps, diff3_mixed merge layout |
+| `lazygit.lua` | lazygit.nvim + `Space g*` keymaps, floating window scaling |
+| `codediff.lua` | codediff.nvim + `Space gv`/`gV` keymaps |
+| `render-markdown.lua` | render-markdown.nvim + treesitter markdown parsers |
+| `vim-rooter.lua` | Auto-cd to project root; markers = `.git`, `Cargo.toml`, `.svn`, `.hg` |
+
+Also in `init.lua`: `<C-Tab>`/`<C-S-Tab>` buffer navigation and a vscode-neovim guard.
+
+lazygit config (`lazygit/config.yml`): `editPreset: nvim-remote` — opens files
+from lazygit in the parent Neovim instead of a nested editor.
 
 ---
 
