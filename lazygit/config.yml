@@ -1,0 +1,10 @@
+# lazygit user configuration.
+# Place at: ~/.config/lazygit/config.yml
+# The install script handles this automatically.
+
+os:
+  # Open files (the `e` command) in the PARENT Neovim instead of a nested editor
+  # inside lazygit's floating terminal. Uses Neovim's built-in RPC socket ($NVIM)
+  # to open the file in a new tab of the parent nvim. Falls back to plain `nvim`
+  # when running lazygit outside of Neovim.
+  editPreset: "nvim-remote"
