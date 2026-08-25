@@ -1,0 +1,80 @@
+# bschur_custom Alacritty Colors
+## name: bschur_custom
+## palette derived from docs.snowflake.com dark mode
+## companion to the tokyonight "storm" bschur_custom override in Neovim
+
+[colors.primary]
+background = "#1e252f"
+foreground = "#dee3ea"
+dim_foreground = "#bdc4d5"
+bright_foreground = "#f4f6f9"
+
+[colors.cursor]
+text = "#1e252f"
+cursor = "#dee3ea"
+
+[colors.vi_mode_cursor]
+text = "#191e24"
+cursor = "#29b5e8"
+
+[colors.search.matches]
+foreground = "#dee3ea"
+background = "#243a5e"
+
+[colors.search.focused_match]
+foreground = "#191e24"
+background = "#29b5e8"
+
+[colors.footer_bar]
+foreground = "#dee3ea"
+background = "#191e24"
+
+[colors.hints.start]
+foreground = "#191e24"
+background = "#fccf54"
+
+[colors.hints.end]
+foreground = "#dee3ea"
+background = "#191e24"
+
+[colors.selection]
+text = "#dee3ea"
+background = "#25365a"
+
+[colors.normal]
+black = "#3a4453"
+red = "#f76a86"
+green = "#34d399"
+yellow = "#fccf54"
+blue = "#5999f8"
+magenta = "#b48ef0"
+cyan = "#29b5e8"
+white = "#bdc4d5"
+
+[colors.bright]
+black = "#5d6a85"
+red = "#ff8ba3"
+green = "#5be0b8"
+yellow = "#ffd97a"
+blue = "#7fb0fb"
+magenta = "#c9a9f6"
+cyan = "#5cc6ef"
+white = "#f4f6f9"
+
+[colors.dim]
+black = "#151a20"
+red = "#c4566a"
+green = "#2a9e78"
+yellow = "#c9a544"
+blue = "#4278c2"
+magenta = "#7160c0"
+cyan = "#2493c2"
+white = "#8a96ad"
+
+[[colors.indexed_colors]]
+index = 16
+color = "#f0a35e"
+
+[[colors.indexed_colors]]
+index = 17
+color = "#e0559a"
