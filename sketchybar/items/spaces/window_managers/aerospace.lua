@@ -1,118 +1,134 @@
--- quite buggy 😅
--- Patched: only the ACTIVE workspace shows its window (app) icons; others are cleared.
--- Credits: https://github.com/falleco/dotfiles/blob/main/sketchybar
----@diagnostic disable: need-check-nil
+-- Minimal AeroSpace workspace UI:
+--   1) a box with the CURRENT workspace number
+--   2) a box with the app icons of the windows on the current workspace
+-- Both update on workspace change (aerospace_workspace_change event) and the
+-- app-icons box also refreshes on a short timer to catch windows opening/closing.
+
 local app_icons = require("helpers.spaces_util.app_icons")
-local sbar_utils = require("helpers.spaces_util.sbar_util")
-
-local function parse_string_to_table(s)
-  local result = {}
-  for line in s:gmatch("([^\n]+)") do
-    table.insert(result, line)
-  end
-  return result
-end
-
-local function get_workspaces()
-  local file = io.popen("aerospace list-workspaces --all")
-  local result = file:read("*a")
-  file:close()
-  return parse_string_to_table(result)
-end
-
-local aerospace_workspaces = get_workspaces()
 
 local function get_current_workspace()
-  local file = io.popen("aerospace list-workspaces --focused")
-  local result = file:read("*a")
-  file:close()
-  return parse_string_to_table(result)[1]
+  local f = io.popen("aerospace list-workspaces --focused")
+  local r = f:read("*a")
+  f:close()
+  return (r:gsub("%s+", ""))
 end
 
-local initial_current_workspace = get_current_workspace()
+local function icon_for(app)
+  local glyph = app_icons[app]
+  if glyph == nil then
+    glyph = app_icons["default"]
+  end
+  return glyph
+end
 
 local Window_Manager = {
   events = {
-    window_change = "space_windows_change", -- TODO: replace with real event name
     focus_change = "aerospace_workspace_change",
   },
-  observer = nil,
 }
 
--- Populate app icons for a single workspace (async)
-local function populate_icons(workspace)
-  SBAR.exec("aerospace list-windows --workspace " .. workspace .. " --format '%{app-name}' ", function(apps)
-    sbar_utils:update_space(workspace, parse_string_to_table(apps))
-  end)
-end
+local number_box = nil
+local apps_box = nil
 
--- Clear the app icons for a single workspace (no label)
-local function clear_icons(workspace)
-  if sbar_utils.created_spaces[workspace] then
-    sbar_utils.created_spaces[workspace]:set({ label = "" })
-  end
+local function update_apps(ws)
+  ws = (ws and ws ~= "") and ws or get_current_workspace()
+  SBAR.exec("aerospace list-windows --workspace " .. ws .. " --format '%{app-name}'", function(out)
+    local strip = ""
+    if type(out) == "string" then
+      for line in out:gmatch("[^\r\n]+") do
+        local name = line:gsub("^%s+", ""):gsub("%s+$", "")
+        if name ~= "" then
+          strip = strip .. " " .. icon_for(name)
+        end
+      end
+    end
+    if strip == "" then
+      strip = "—"
+    end
+    if apps_box then
+      apps_box:set({ label = strip })
+    end
+  end)
 end
 
 function Window_Manager:init()
-  for i, workspace in ipairs(aerospace_workspaces) do
-    local selected = workspace == initial_current_workspace
-    local space_item = sbar_utils:add_space_item(workspace, i)
-    sbar_utils:highlight_focused_space(space_item, selected)
+  -- Current workspace number
+  number_box = SBAR.add("item", "workspace.current", {
+    position = "left",
+    padding_left = 6,
+    padding_right = 4,
+    icon = {
+      string = get_current_workspace(),
+      font = { family = FONT.label_font, style = FONT.style_map["Bold"], size = 15.0 },
+      color = COLORS.lavender,
+      padding_left = 12,
+      padding_right = 12,
+    },
+    label = { drawing = false },
+    background = {
+      color = COLORS.surface0,
+      border_color = COLORS.lavender,
+      border_width = 2,
+      corner_radius = 6,
+      height = 26,
+    },
+  })
 
-    space_item:subscribe(self.events.focus_change, function(env)
-      local is_selected = env.FOCUSED_WORKSPACE == workspace
-      sbar_utils:highlight_focused_space(space_item, is_selected)
-      -- Only the active workspace shows its window (app) icons
-      if is_selected then
-        populate_icons(workspace)
-      else
-        clear_icons(workspace)
-      end
-    end)
+  -- App icons on the current workspace
+  apps_box = SBAR.add("item", "workspace.apps", {
+    position = "left",
+    padding_left = 4,
+    padding_right = 6,
+    icon = { drawing = false },
+    label = {
+      string = "—",
+      font = "sketchybar-app-font:Regular:16.0",
+      color = COLORS.text,
+      padding_left = 12,
+      padding_right = 12,
+    },
+    background = {
+      color = COLORS.surface0,
+      border_color = COLORS.surface1,
+      border_width = 2,
+      corner_radius = 6,
+      height = 26,
+    },
+  })
 
-    space_item:subscribe("mouse.clicked", function(env)
-      LOG:info(env.NAME)
-      self:perform_switch_desktop(env.BUTTON, env.SID)
-    end)
-  end
-  -- init app icons only for the focused space
-  self:update_space_label()
+  number_box:subscribe(self.events.focus_change, function(env)
+    local ws = env and env.FOCUSED_WORKSPACE
+    if not ws or ws == "" then
+      ws = get_current_workspace()
+    end
+    number_box:set({ icon = { string = ws } })
+    update_apps(ws)
+  end)
+
+  -- Click the number box to cycle workspaces (right-click = previous).
+  number_box:subscribe("mouse.clicked", function(env)
+    if env and env.BUTTON == "right" then
+      SBAR.exec("aerospace workspace --wrap-around prev")
+    else
+      SBAR.exec("aerospace workspace --wrap-around next")
+    end
+  end)
+
+  -- initial population
+  update_apps()
 end
 
 function Window_Manager:start_watcher()
-  local watcher = SBAR.add("item", {
+  -- Refresh app icons periodically so windows opened/closed on the current
+  -- workspace are reflected without a workspace switch.
+  local watcher = SBAR.add("item", "workspace.apps.watcher", {
     drawing = false,
     updates = true,
-    update_freq = 5,
+    update_freq = 3,
   })
-
-  watcher:subscribe("routine", function(env)
-    self:update_space_label()
+  watcher:subscribe("routine", function()
+    update_apps()
   end)
-end
-
---- @param button string the mouse button clicked
---- @param sid string clicked space's id
-function Window_Manager:perform_switch_desktop(button, sid)
-  if button == "left" then
-    SBAR.exec("aerospace workspace " .. sid)
-  elseif button == "right" then
-    -- not implemented
-  elseif button == "other" then -- for eaxmple, middle click
-    LOG:info("Middle click on space " .. sid)
-  end
-end
-
--- Refresh app icons ONLY for the focused workspace; clear all the others.
-function Window_Manager:update_space_label()
-  local focused = get_current_workspace()
-  for _, workspace in ipairs(aerospace_workspaces) do
-    if workspace == focused then
-      populate_icons(workspace)
-    else
-      clear_icons(workspace)
-    end
-  end
 end
 
 return Window_Manager
