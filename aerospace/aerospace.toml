@@ -1,0 +1,196 @@
+# Start AeroSpace at login
+start-at-login = true
+config-version = 2
+after-startup-command = ['exec-and-forget sketchybar']
+
+# Normalizations
+enable-normalization-flatten-containers = true
+enable-normalization-opposite-orientation-for-nested-containers = true
+
+# Layout settings
+accordion-padding = 0
+default-root-container-layout = 'accordion' # tiles
+default-root-container-orientation = 'auto'
+
+# Mouse follows focus
+on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
+
+# Sketchybar (Efterklang config) : notify on workspace focus change
+exec-on-workspace-change = ['/bin/bash', '-c', 'sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE PREV_WORKSPACE=$AEROSPACE_PREV_WORKSPACE']
+
+# Persistent workspaces 1-12
+persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10','11','12']
+
+# Disable macOS hide app (prevents accidental cmd-h)
+automatically-unhide-macos-hidden-apps = false
+
+# Gaps between windows
+[gaps]
+inner.horizontal = 5
+inner.vertical =   5
+outer.left =       5
+outer.bottom =     5
+# Small top gap on the built-in only; the notch/menu-bar strip (where Sketchybar
+# draws) is already excluded from tiling. Externals stay full-height.
+# If windows overlap the bar once it's running, bump the built-in value up.
+outer.top = [{ monitor."built-in" = 5 }, 0]
+outer.right =      5
+
+[mode.main.binding]
+# terminal
+alt-shift-enter = 'exec-and-forget open -n /Applications/Alacritty.app'
+
+# Focus windows with alt + h/j/k/l
+cmd-h = 'focus --boundaries all-monitors-outer-frame left'
+cmd-j = 'focus --boundaries all-monitors-outer-frame down'
+cmd-k = 'focus --boundaries all-monitors-outer-frame up'
+cmd-l = 'focus --boundaries all-monitors-outer-frame right'
+
+# swap windows
+ctrl-shift-left  = 'move --boundaries all-monitors-outer-frame left'
+ctrl-shift-down  = 'move --boundaries all-monitors-outer-frame down'
+ctrl-shift-up    = 'move --boundaries all-monitors-outer-frame up'
+ctrl-shift-right = 'move --boundaries all-monitors-outer-frame right'
+
+# resize
+ctrl-cmd-left = 'resize width -50' #left
+ctrl-cmd-right = 'resize width +50' #right
+ctrl-cmd-up = 'resize height +50'
+ctrl-cmd-down = 'resize height -50'
+
+# Workspaces: win + 1-9 to switch
+ctrl-1 = 'workspace 1'
+ctrl-2 = 'workspace 2'
+ctrl-3 = 'workspace 3'
+ctrl-4 = 'workspace 4'
+ctrl-5 = 'workspace 5'
+ctrl-6 = 'workspace 6'
+ctrl-7 = 'workspace 7'
+ctrl-8 = 'workspace 8'
+ctrl-9 = 'workspace 9'
+ctrl-0 = 'workspace 10'
+
+# Move to workspace: ctrl + 1-9
+alt-1 = 'move-node-to-workspace 1'
+alt-2 = 'move-node-to-workspace 2'
+alt-3 = 'move-node-to-workspace 3'
+alt-4 = 'move-node-to-workspace 4'
+alt-5 = 'move-node-to-workspace 5'
+alt-6 = 'move-node-to-workspace 6'
+alt-7 = 'move-node-to-workspace 7'
+alt-8 = 'move-node-to-workspace 8'
+alt-9 = 'move-node-to-workspace 9'
+
+# move workspace left or right
+alt-shift-a = 'move-workspace-to-monitor --wrap-around prev'
+alt-shift-s = 'move-workspace-to-monitor --wrap-around next'
+
+# next/prev workspace
+ctrl-w = 'workspace next'
+ctrl-q = 'workspace prev'
+
+ctrl-shift-w = 'move-node-to-workspace next'
+ctrl-shift-q = 'move-node-to-workspace prev'
+
+# Utilities
+ctrl-shift-z = 'close'
+alt-tab = 'workspace-back-and-forth'
+alt-f = 'fullscreen'
+ctrl-f = 'fullscreen'
+alt-shift-t = 'layout floating tiling'
+ctrl-t = 'layout floating tiling'
+alt-v = 'layout tiles horizontal vertical'
+ctrl-v = 'layout tiles horizontal vertical'
+
+
+# =============================================================================
+#
+# Custom Window Applications
+#
+# =============================================================================
+
+# aerospace list-windows --all
+
+# # slack
+# [[on-window-detected]]
+#     if.app-id = 'com.tinyspeck.slackmacgap'
+#     run = ['move-node-to-workspace 1']
+
+# # Outlook
+# [[on-window-detected]]
+#     if.app-id = 'com.microsoft.Outlook'
+#     run = ['move-node-to-workspace 5']
+
+
+# # # Floating windows for system apps
+# # [[on-window-detected]]
+# # if.app-id = 'com.apple.finder'
+# # run = 'layout floating'
+
+# [[on-window-detected]]
+# if.app-id = 'com.apple.systempreferences'
+# run = 'layout floating'
+
+# [[on-window-detected]]
+# if.app-id = 'com.apple.ActivityMonitor'
+# run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = "com.cisco.Secure-Client"
+run = "layout floating"
+
+[[on-window-detected]]
+if.app-id = "com.cisco.anyconnect.gui"
+run = "layout floating"
+
+[[on-window-detected]]
+if.app-id = "com.cisco.anyconnect.macos"
+run = "layout floating"
+
+[[on-window-detected]]
+if.app-name-regex-substring = 'Cisco Secure Client'
+run = 'layout floating'
+
+# Zoom meeting on top of zoom workplace
+[[on-window-detected]]
+if.app-name-regex-substring = 'zoom\.us'
+if.window-title-regex-substring = 'Zoom Meeting'
+run = 'fullscreen'
+
+# =============================================================================
+#
+# Workspace to Monitor Mapping
+# Run `aerospace list-monitors` command in terminal to view each monitor ID.
+#
+# =============================================================================
+
+# HOME
+## 1 | Built-in Retina Display
+## 2 | Odyssey G7
+## 3 | LG HDR QHD
+
+[workspace-to-monitor-force-assignment]
+1 = 1
+2 = 2
+3 = 3
+4 = 1
+5 = 2
+6 = 3
+7 = 1
+8 = 2
+9 = 3
+10 = 1
+11 = 2
+12 = 3
+
+# [workspace-to-monitor-force-assignment]
+# 1 = 1
+# 2 = 1
+# 3 = 1
+# 4 = 2
+# 5 = 2
+# 6 = 2
+# 7 = 3
+# 8 = 3
+# 9 = 3
+# 10 = 1
