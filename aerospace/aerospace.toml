@@ -19,7 +19,7 @@ on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
 exec-on-workspace-change = ['/bin/bash', '-c', 'sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE PREV_WORKSPACE=$AEROSPACE_PREV_WORKSPACE']
 
 # Persistent workspaces 1-12
-persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10','11','12']
+persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
 
 # Disable macOS hide app (prevents accidental cmd-h)
 automatically-unhide-macos-hidden-apps = false
@@ -68,7 +68,6 @@ ctrl-6 = 'workspace 6'
 ctrl-7 = 'workspace 7'
 ctrl-8 = 'workspace 8'
 ctrl-9 = 'workspace 9'
-ctrl-0 = 'workspace 10'
 
 # Move to workspace: ctrl + 1-9
 alt-1 = 'move-node-to-workspace 1'
@@ -179,9 +178,6 @@ run = 'fullscreen'
 7 = 1
 8 = 2
 9 = 3
-10 = 1
-11 = 2
-12 = 3
 
 # [workspace-to-monitor-force-assignment]
 # 1 = 1

@@ -104,19 +104,6 @@ local track_album = SBAR.add("item", "music.album", {
 -- #region Playback Controls
 local CONTROLS_Y_OFFSET = -55 + Y_OFFSET
 
-local shuffle_btn = SBAR.add("item", "music.shuffle", {
-  position = popup_position,
-  icon = {
-    string = ICONS.media.shuffle,
-    padding_left = 5,
-    padding_right = 5,
-    color = COLORS.grey,
-    highlight_color = COLORS.lavender,
-  },
-  label = { drawing = false },
-  y_offset = CONTROLS_Y_OFFSET,
-})
-
 local prev_btn = SBAR.add("item", "music.back", {
   position = popup_position,
   icon = {
@@ -163,30 +150,15 @@ local next_btn = SBAR.add("item", "music.next", {
   y_offset = CONTROLS_Y_OFFSET,
 })
 
-local repeat_btn = SBAR.add("item", "music.repeat", {
-  position = popup_position,
-  icon = {
-    string = ICONS.media.repeating,
-    highlight_color = COLORS.lavender,
-    padding_left = 5,
-    padding_right = 10,
-    color = COLORS.grey,
-  },
-  label = { drawing = false },
-  y_offset = CONTROLS_Y_OFFSET,
-})
-
 SBAR.add("item", "music.spacer", {
   position = popup_position,
   width = 5,
 })
 
 SBAR.add("bracket", "music.controls", {
-  shuffle_btn.name,
   prev_btn.name,
   play_btn.name,
   next_btn.name,
-  repeat_btn.name,
 }, {
   background = {
     color = COLORS.surface0,
@@ -199,7 +171,7 @@ SBAR.add("bracket", "music.controls", {
 
 -- #region Callbacks functions for updating music info
 local track_info_updater = function(title, artist, album)
-  music_anchor:set({ label = title })
+  music_anchor:set({ label = { string = title, drawing = true } })
   track_title:set({ label = title })
   -- 检查是否为空字符串或nil
   local display_artist = (artist and artist ~= "") and artist or MUSIC.DEFAULT_ARTIST
@@ -233,24 +205,21 @@ local icon_updater = function(is_playing, is_repeat, is_shuffle)
       icon = { string = ICONS.media.pause, color = COLORS.red },
     })
   end
-
-  if is_shuffle then
-    shuffle_btn:set({ icon = { highlight = true } })
-  else
-    shuffle_btn:set({ icon = { highlight = false } })
-  end
-
-  if is_repeat then
-    repeat_btn:set({ icon = { highlight = true } })
-  else
-    repeat_btn:set({ icon = { highlight = false } })
-  end
 end
 -- #endregion Updaters
 
 -- #region Event
 music_anchor:subscribe("routine", function()
-  client.update_current_track(track_info_updater)
+  -- Only show/scroll the track label when something is actually playing.
+  -- When paused/stopped, collapse the label entirely (no perpetual scroll).
+  client.is_playing(function(playing)
+    if playing then
+      music_anchor:set({ label = { drawing = true } })
+      client.update_current_track(track_info_updater)
+    else
+      music_anchor:set({ label = { drawing = false, string = "" } })
+    end
+  end)
 end)
 
 music_anchor:subscribe("mouse.clicked", function()
@@ -261,20 +230,6 @@ end)
 
 play_btn:subscribe("mouse.clicked", function()
   client.toggle_play()
-  SBAR.exec("sleep " .. DELAY_TIME, function()
-    client.stats(icon_updater)
-  end)
-end)
-
-shuffle_btn:subscribe("mouse.clicked", function()
-  client.toggle_shuffle()
-  SBAR.exec("sleep " .. DELAY_TIME, function()
-    client.stats(icon_updater)
-  end)
-end)
-
-repeat_btn:subscribe("mouse.clicked", function()
-  client.toggle_repeat()
   SBAR.exec("sleep " .. DELAY_TIME, function()
     client.stats(icon_updater)
   end)

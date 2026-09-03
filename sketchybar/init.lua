@@ -23,10 +23,19 @@ SBAR.bar({
   y_offset = preset_conf.Y_OFFSET,
   margin = preset_conf.MARGIN,
   notch_width = 200,
-  -- Only draw on the built-in (notched) display; hide on externals.
-  -- Use "main" instead if you make an external your macOS Main display.
-  display = "1",
+  -- Render above the native menu bar. Required by sketchybar-toggle so the bar
+  -- isn't drawn behind the menu bar. ("window" is distinct from "on".)
+  topmost = "window",
+  -- Draw only on the macOS Main display (your laptop). Using "main" instead of a
+  -- numeric index keeps the bar on the laptop even when monitors are plugged in
+  -- and macOS reshuffles display indices.
+  display = "main",
 })
+
+-- Coordinate with the native menu bar: hide SketchyBar when the mouse nears the
+-- top so the menu bar appears cleanly (no overlap), then slide it back.
+-- Requires the sketchybar-toggle binary (brew install malpern/tap/sketchybar-toggle).
+SBAR.exec("pkill -x sketchybar-toggle 2>/dev/null; command -v sketchybar-toggle >/dev/null 2>&1 && sketchybar-toggle --debounce 30 >/tmp/sketchybar-toggle.log 2>&1 &")
 
 SBAR.default({
   updates = "when_shown",

@@ -34,12 +34,31 @@ function media_control.toggle_play()
   guarded("media-control toggle-play-pause")
 end
 
+-- `toggle-shuffle` / `toggle-repeat` are unreliable via MediaRemote (often
+-- no-op). Instead read the current mode from `media-control get` and set the
+-- next one explicitly. shuffle: off(1)/tracks(3); repeat: off(1)/track(2)/playlist(3).
 function media_control.toggle_shuffle()
-  guarded("media-control toggle-shuffle")
+  guarded('media-control get | jq -r ".shuffleMode // .shuffle // empty"', function(mode)
+    local m = type(mode) == "string" and mode:gsub("%s+", "") or ""
+    -- treat anything "on-ish" as on -> turn off; otherwise turn on (tracks)
+    local next_mode = (m == "" or m == "0" or m == "1" or m:lower() == "off" or m:lower() == "false") and "tracks" or "off"
+    SBAR.exec("media-control shuffle " .. next_mode)
+  end)
 end
 
 function media_control.toggle_repeat()
-  guarded("media-control toggle-repeat")
+  guarded('media-control get | jq -r ".repeatMode // .repeat // empty"', function(mode)
+    local m = type(mode) == "string" and mode:gsub("%s+", "") or ""
+    -- cycle: off -> track -> playlist -> off
+    local next_mode = "track"
+    local low = m:lower()
+    if low == "track" or m == "2" then
+      next_mode = "playlist"
+    elseif low == "playlist" or m == "3" then
+      next_mode = "off"
+    end
+    SBAR.exec("media-control repeat " .. next_mode)
+  end)
 end
 
 -- #endregion Control Functions
@@ -48,8 +67,27 @@ end
 function media_control.stats(callback)
   guarded("media-control get -h", function(result)
     if type(result) == "table" then
-      callback(result.playing, false, false)
+      local rep = result.repeatMode or result["repeat"]
+      local shuf = result.shuffleMode or result.shuffle
+      local function truthy(v)
+        if type(v) == "boolean" then return v end
+        if type(v) == "number" then return v > 1 end
+        if type(v) == "string" then
+          local l = v:lower()
+          return not (l == "" or l == "off" or l == "0" or l == "1" or l == "false")
+        end
+        return false
+      end
+      callback(result.playing, truthy(rep), truthy(shuf))
     end
+  end)
+end
+
+-- Lightweight play-state check used to collapse the bar label when paused.
+-- Calls back with true/false, or false if nothing is playing/running.
+function media_control.is_playing(callback)
+  guarded("media-control get -h", function(result)
+    callback(type(result) == "table" and result.playing == true)
   end)
 end
 
