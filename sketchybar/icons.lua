@@ -15,6 +15,14 @@ local icons = {
     on = "􁏮",
     off = "􁏯",
   },
+  winstate = {
+    fullscreen = "􀏒", -- arrow.up.left.and.arrow.down.right (fullscreen)
+    floating = "􀏝", -- macwindow.on.rectangle (floating)
+    tiled_h = "􀏟", -- rectangle.split.2x1 (horizontal tiles)
+    tiled_v = "􀏞", -- rectangle.split.1x2 (vertical tiles)
+    accordion = "􀏢", -- rectangle.split.3x1 (accordion)
+    tiled = "􀏠", -- square.grid.2x2 (fallback)
+  },
   volume = {
     _100 = "􀊩",
     _66 = "􀊧",

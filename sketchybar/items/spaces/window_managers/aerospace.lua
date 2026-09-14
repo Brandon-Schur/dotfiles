@@ -24,11 +24,48 @@ end
 local Window_Manager = {
   events = {
     focus_change = "aerospace_workspace_change",
+    window_focus_change = "aerospace_focus_change",
+    mode_change = "aerospace_mode_change",
   },
 }
 
 local number_box = nil
 local apps_box = nil
+local state_box = nil
+local mode_box = nil
+
+-- Reflect the focused window's state: fullscreen / floating / tiled.
+local function update_state()
+  SBAR.exec("aerospace list-windows --focused --format '%{window-is-fullscreen}|%{window-layout}'", function(out)
+    if not state_box then
+      return
+    end
+    if type(out) ~= "string" or out:gsub("%s+", "") == "" then
+      -- no focused window (e.g. empty workspace)
+      state_box:set({ icon = { string = ICONS.winstate.tiled, color = COLORS.surface1 } })
+      return
+    end
+    local fs, layout = out:match("([^|]*)|([^|\r\n]*)")
+    fs = fs and fs:gsub("%s+", "") or ""
+    layout = layout and layout:gsub("%s+", "") or ""
+
+    local glyph, color
+    if fs == "true" then
+      glyph, color = ICONS.winstate.fullscreen, COLORS.peach
+    elseif layout == "floating" then
+      glyph, color = ICONS.winstate.floating, COLORS.yellow
+    elseif layout == "v_tiles" then
+      glyph, color = ICONS.winstate.tiled_v, COLORS.blue
+    elseif layout == "h_tiles" then
+      glyph, color = ICONS.winstate.tiled_h, COLORS.green
+    elseif layout == "h_accordion" or layout == "v_accordion" then
+      glyph, color = ICONS.winstate.accordion, COLORS.lavender
+    else
+      glyph, color = ICONS.winstate.tiled, COLORS.green
+    end
+    state_box:set({ icon = { string = glyph, color = color } })
+  end)
+end
 
 local function update_apps(ws)
   ws = (ws and ws ~= "") and ws or get_current_workspace()
@@ -52,6 +89,10 @@ local function update_apps(ws)
 end
 
 function Window_Manager:init()
+  -- Register the custom events AeroSpace fires (see aerospace.toml callbacks).
+  SBAR.add("event", self.events.window_focus_change)
+  SBAR.add("event", self.events.mode_change)
+
   -- Current workspace number
   number_box = SBAR.add("item", "workspace.current", {
     position = "left",
@@ -96,6 +137,68 @@ function Window_Manager:init()
     },
   })
 
+  -- Focused-window state indicator (fullscreen / floating / tiled)
+  state_box = SBAR.add("item", "workspace.state", {
+    position = "left",
+    padding_left = 4,
+    padding_right = 6,
+    icon = {
+      string = ICONS.winstate.tiled,
+      font = { family = FONT.icon_font, style = FONT.style_map["Bold"], size = 15.0 },
+      color = COLORS.green,
+      padding_left = 10,
+      padding_right = 10,
+    },
+    label = { drawing = false },
+    background = {
+      color = COLORS.surface0,
+      border_color = COLORS.surface1,
+      border_width = 2,
+      corner_radius = 6,
+      height = 26,
+    },
+  })
+
+  -- Binding-mode indicator (e.g. "main", or a resize/service submode you add later)
+  mode_box = SBAR.add("item", "workspace.mode", {
+    position = "left",
+    padding_left = 4,
+    padding_right = 6,
+    icon = {
+      string = "main",
+      font = { family = FONT.label_font, style = FONT.style_map["Bold"], size = 13.0 },
+      color = COLORS.subtext0,
+      padding_left = 10,
+      padding_right = 10,
+    },
+    label = { drawing = false },
+    background = {
+      color = COLORS.surface0,
+      border_color = COLORS.surface1,
+      border_width = 2,
+      corner_radius = 6,
+      height = 26,
+    },
+  })
+
+  -- Instant window-state updates when window focus changes.
+  state_box:subscribe(self.events.window_focus_change, function()
+    update_state()
+  end)
+
+  -- Mode indicator: highlight when not in the default "main" mode.
+  mode_box:subscribe(self.events.mode_change, function(env)
+    local mode = (env and env.MODE and env.MODE ~= "") and env.MODE or "main"
+    local is_main = mode == "main"
+    mode_box:set({
+      icon = {
+        string = mode,
+        color = is_main and COLORS.subtext0 or COLORS.peach,
+      },
+      background = { border_color = is_main and COLORS.surface1 or COLORS.peach },
+    })
+  end)
+
   number_box:subscribe(self.events.focus_change, function(env)
     local ws = env and env.FOCUSED_WORKSPACE
     if not ws or ws == "" then
@@ -103,6 +206,7 @@ function Window_Manager:init()
     end
     number_box:set({ icon = { string = ws } })
     update_apps(ws)
+    update_state()
   end)
 
   -- Click the number box to cycle workspaces (right-click = previous).
@@ -116,6 +220,7 @@ function Window_Manager:init()
 
   -- initial population
   update_apps()
+  update_state()
 end
 
 function Window_Manager:start_watcher()
@@ -128,6 +233,7 @@ function Window_Manager:start_watcher()
   })
   watcher:subscribe("routine", function()
     update_apps()
+    update_state()
   end)
 end
 

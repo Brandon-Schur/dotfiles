@@ -16,7 +16,14 @@ default-root-container-orientation = 'auto'
 on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
 
 # Sketchybar (Efterklang config) : notify on workspace focus change
-exec-on-workspace-change = ['/bin/bash', '-c', 'sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE PREV_WORKSPACE=$AEROSPACE_PREV_WORKSPACE']
+exec-on-workspace-change = ['/bin/bash', '-c', '/opt/homebrew/bin/sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE PREV_WORKSPACE=$AEROSPACE_PREV_WORKSPACE']
+
+# Sketchybar : notify on window focus change (drives the focused-window state icon)
+# NOTE: AeroSpace callbacks run with a minimal PATH, so call sketchybar by absolute path.
+on-focus-changed = ['exec-and-forget /opt/homebrew/bin/sketchybar --trigger aerospace_focus_change']
+
+# Sketchybar : notify on binding-mode change (drives the mode indicator)
+on-mode-changed = ['exec-and-forget /opt/homebrew/bin/sketchybar --trigger aerospace_mode_change MODE=$AEROSPACE_MODE']
 
 # Persistent workspaces 1-12
 persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
@@ -39,12 +46,13 @@ outer.right =      5
 [mode.main.binding]
 # terminal
 alt-shift-enter = 'exec-and-forget open -n /Applications/Alacritty.app'
+alt-q = 'close'
 
 # Focus windows with alt + h/j/k/l
-cmd-h = 'focus --boundaries all-monitors-outer-frame left'
-cmd-j = 'focus --boundaries all-monitors-outer-frame down'
-cmd-k = 'focus --boundaries all-monitors-outer-frame up'
-cmd-l = 'focus --boundaries all-monitors-outer-frame right'
+ctrl-h = 'focus --boundaries all-monitors-outer-frame left'
+ctrl-j = 'focus --boundaries all-monitors-outer-frame down'
+ctrl-k = 'focus --boundaries all-monitors-outer-frame up'
+ctrl-l = 'focus --boundaries all-monitors-outer-frame right'
 
 # swap windows
 ctrl-shift-left  = 'move --boundaries all-monitors-outer-frame left'
@@ -94,12 +102,12 @@ ctrl-shift-q = 'move-node-to-workspace prev'
 # Utilities
 ctrl-shift-z = 'close'
 alt-tab = 'workspace-back-and-forth'
-alt-f = 'fullscreen'
-ctrl-f = 'fullscreen'
-alt-shift-t = 'layout floating tiling'
-ctrl-t = 'layout floating tiling'
-alt-v = 'layout tiles horizontal vertical'
-ctrl-v = 'layout tiles horizontal vertical'
+alt-f = ['fullscreen', 'exec-and-forget /opt/homebrew/bin/sketchybar --trigger aerospace_focus_change']
+ctrl-f = ['fullscreen', 'exec-and-forget /opt/homebrew/bin/sketchybar --trigger aerospace_focus_change']
+alt-shift-t = ['layout floating tiling', 'exec-and-forget /opt/homebrew/bin/sketchybar --trigger aerospace_focus_change']
+ctrl-t = ['layout floating tiling', 'exec-and-forget /opt/homebrew/bin/sketchybar --trigger aerospace_focus_change']
+alt-v = ['layout tiles horizontal vertical', 'exec-and-forget /opt/homebrew/bin/sketchybar --trigger aerospace_focus_change']
+ctrl-v = ['layout tiles horizontal vertical', 'exec-and-forget /opt/homebrew/bin/sketchybar --trigger aerospace_focus_change']
 
 
 # =============================================================================
@@ -155,6 +163,15 @@ run = 'layout floating'
 if.app-name-regex-substring = 'zoom\.us'
 if.window-title-regex-substring = 'Zoom Meeting'
 run = 'fullscreen'
+
+# Wisp
+[[on-window-detected]]
+if.app-name-regex-substring = 'Wisp'
+run = [
+    'move-node-to-workspace 4',
+    'layout floating tiling',   # Explicitly forces a toggle from floating to tiling
+    'fullscreen on'
+]
 
 # =============================================================================
 #
