@@ -11,6 +11,7 @@ Personal terminal and editor configuration — **tmux** + **Neovim** (AstroNvim)
 | Tool | Description |
 |---|---|
 | **tmux** | Custom colorscheme over catppuccin v2 status layout |
+| **sesh picker** | fzf session picker on `prefix s` — sessions ordered by last use, with a metrics table |
 | **Neovim** | AstroNvim v5 with custom colorscheme, git tools, LSP, and formatters |
 
 ### Neovim plugins
@@ -226,10 +227,66 @@ nvim                         # lazy.nvim auto-installs all plugins on first open
 | `prefix Ctrl-a` | Cycle through panes |
 | `prefix n` | Next window |
 | `prefix N` | Previous window |
-| `prefix s` | Session picker (sorted, 1-indexed) |
+| `prefix s` | **sesh** session picker (see below) |
+| `prefix S` | sesh's own built-in picker TUI |
+| `prefix T` | Built-in tree picker (sorted, 1-indexed) |
+| `prefix L` | Previous session, via `sesh last` |
 | `prefix e` | Capture scrollback to `~/.tmux.log` |
 | `prefix I` | Install TPM plugins |
 | `prefix r` | Reload tmux config |
+
+### sesh session picker (`prefix s`)
+
+An fzf picker over `sesh list`, rendered as an aligned table. Rows are ordered by
+**last use**, most recent first, and carry two dates so a session you have returned
+to for weeks is distinguishable from one you opened this morning.
+
+| Column | Meaning |
+|---|---|
+| `#` | 1-9 on the first nine rows — press the digit to jump straight there |
+| `name` | tmux session, or a zoxide/config directory |
+| `used` | last activity, relative |
+| `created` | session creation date |
+| `uses` | zoxide frecency score for the directory (tmux has no attach counter) |
+| `win` | window count |
+
+Digits jump only while the filter is empty; once you type, they filter normally, so
+directory names containing numbers still work. No modifier-only chords, so nothing
+fights a tiling window manager.
+
+| Key | Action |
+|---|---|
+| `1`-`9` | Jump to that row and attach (empty filter only) |
+| `Tab` / `Shift-Tab` | Move down / up |
+| `ctrl-a` | All sources |
+| `ctrl-t` | tmux sessions only |
+| `ctrl-g` | sesh config entries |
+| `ctrl-x` | zoxide directories |
+| `ctrl-f` | Directory search under `$HOME` |
+| `ctrl-d` | Kill the highlighted session |
+
+Install: `bash scripts/install-sesh.sh` (also run by `install.sh`). Needs
+[sesh](https://github.com/joshmedeski/sesh) and [fzf](https://github.com/junegunn/fzf);
+[zoxide](https://github.com/ajeetdsouza/zoxide) is optional and only fills the `uses`
+column. The fast path uses `gawk`'s `strftime()`.
+
+#### Two implementations, kept identical on purpose
+
+`sesh/` holds both a Python reference and an awk fast path:
+
+| File | Role |
+|---|---|
+| `sesh-popup` | the picker itself — fzf invocation and key bindings |
+| `sesh-picker-list` | reference implementation (Python); serves the flagged sources |
+| `sesh-picker-fast` | awk hot path, byte-identical output, ~15ms vs ~70ms |
+| `check-picker-parity` | asserts the two agree |
+
+awk starts in ~2ms against Python's ~21ms, which is most of the difference on a
+picker you hit constantly. The cost is a duplicated row layout, so **run
+`check-picker-parity` after touching either** — it exists because a real divergence
+shipped once: the fast path dropped the tmux session path, which silently blanked the
+`uses` column for every tmux session, and a naive equality check missed it because no
+session's directory happened to be in the zoxide database at the time.
 
 ### Neovim (leader = `Space`)
 

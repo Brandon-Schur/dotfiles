@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# awk implementation of sesh-picker-list's no-flag ("all sources") output.
+#
+# Byte-identical to `sesh-picker-list --icons`, which it exists only to replace on
+# the picker's hot path. That script is Python, and a Python interpreter costs
+# 20.7ms to start against awk's 1.6ms — ~19ms of a 46ms list stage spent before a
+# line is read. It became portable to awk once the sesh-list JSON dependency was
+# removed: the inputs are now just TSV from tmux and text from zoxide.
+#
+# sesh-picker-list remains the reference implementation and still serves every
+# flagged/reload source (-t/-c/-z/--find), which do need JSON. Any change to the
+# row layout must land in BOTH; scripts/check_picker_parity is the guard.
+set -uo pipefail
+
+HOME_DIR="$HOME"
+TMUX_ICON=$''
+ZOXIDE_ICON=$''
+
+# tmux and zoxide are independent; run them concurrently as sesh-picker-list does.
+tmux_out=$(mktemp); zox_out=$(mktemp)
+trap 'rm -f "$tmux_out" "$zox_out"' EXIT
+# Ordered by last activity, most recent first -- NOT tmux's default, which is
+# alphabetical by name. `sesh list` returns tmux sessions in recency order, and
+# this list has to match it. `sort -s` keeps ties in tmux's alphabetical order so
+# the result is deterministic.
+tmux list-sessions -F '#{session_name}	#{session_windows}	#{session_created}	#{session_activity}	#{session_path}' \
+  2>/dev/null | sort -s -t'	' -k4,4nr > "$tmux_out" &
+tmux_pid=$!
+zoxide query --list --score > "$zox_out" 2>/dev/null &
+zox_pid=$!
+wait "$tmux_pid" 2>/dev/null || true
+wait "$zox_pid" 2>/dev/null || true
+
+awk -v now="$(date +%s)" -v home="$HOME_DIR" \
+    -v ticon="$TMUX_ICON" -v zicon="$ZOXIDE_ICON" \
+    -v tmuxfile="$tmux_out" -v zoxfile="$zox_out" '
+function pad_left(s, w)  { return sprintf("%" w "s", s) }
+function pad_right(s, w) { return sprintf("%-" w "s", s) }
+# Mirrors sesh-picker-list.fmt(): idx>2, icon, name<50, used>4, created>7, uses>5, win>4
+function fmt(idx, icon, name, used, crt, uses, win) {  # all params, no globals
+  return pad_left(idx,2) "  " icon "  " pad_right(substr(name,1,50),50) " " \
+         pad_left(used,4) "  " pad_left(crt,7) "  " pad_left(uses,5) "  " pad_left(win,4)
+}
+# NOTE: every helper declares its scratch variables as trailing parameters. awk has
+# no block scope, so a bare `i = int(x)` inside pyround() assigned the GLOBAL row
+# counter and the index column started printing rounded scores instead of 1..9.
+function rel(epoch,   d) {
+  if (epoch == "" || epoch+0 == 0) return ""
+  d = now - epoch; if (d < 0) d = 0; d = int(d)
+  if (d < 60)     return d "s"
+  if (d < 3600)   return int(d/60) "m"
+  if (d < 86400)  return int(d/3600) "h"
+  if (d < 604800) return int(d/86400) "d"
+  return int(d/604800) "w"
+}
+function created(epoch) {
+  if (epoch == "" || epoch+0 == 0) return ""
+  return strftime("%b %d", epoch)
+}
+# Python round() is half-to-even, not half-up; int(x+0.5) would disagree on .5
+# and print a score one higher than sesh-picker-list does.
+function pyround(x,   i, f) {
+  i = int(x); f = x - i
+  if (f > 0.5) return i + 1
+  if (f < 0.5) return i
+  return (i % 2 == 0) ? i : i + 1
+}
+BEGIN {
+  hl = length(home)
+  # header: two pinned lines, each with a leading TAB so --with-nth=2 finds them
+  printf "\t%s\n", "  " fmt("#", " ", "name", "used", "created", "uses", "win")
+  printf "\t%s\n", "     1-9 jump   ^a all  ^t tmux  ^g cfg  ^x zoxide  ^f find  ^d kill"
+
+  # zoxide scores first: the tmux loop needs them for the uses column.
+  while ((getline zline < zoxfile) > 0) {
+    sub(/^[ \t]+/, "", zline); sub(/[ \t]+$/, "", zline)
+    if (zline == "") continue
+    if (match(zline, /[ \t]+/) == 0) continue
+    zs = substr(zline, 1, RSTART - 1)
+    zp = substr(zline, RSTART + RLENGTH)
+    if (zp != "") zscore[zp] = zs + 0
+  }
+  close(zoxfile)
+
+  i = 0
+  while ((getline line < tmuxfile) > 0) {
+    n = split(line, p, "\t")
+    if (n < 4 || p[1] == "") continue
+    i++
+    idx = (i <= 9) ? i : ""
+    # p[5] is session_path. The uses column is the zoxide frecency score for that
+    # directory, so dropping the path blanked it for every tmux session — a real
+    # regression that only showed up once a session cwd was in the zoxide DB.
+    spath = (n >= 5) ? p[5] : ""
+    su = ""
+    if (spath != "" && (spath in zscore)) su = pyround(zscore[spath]) ""
+    printf "%s\t%s\n", p[1], fmt(idx, ticon, p[1], rel(p[4]), created(p[3]), su, p[2] "w")
+  }
+  while ((getline line < zoxfile) > 0) {
+    sub(/^[ \t]+/, "", line); sub(/[ \t]+$/, "", line)
+    if (line == "") continue
+    if (match(line, /[ \t]+/) == 0) continue
+    score = substr(line, 1, RSTART - 1)
+    path  = substr(line, RSTART + RLENGTH)
+    if (path == "") continue
+    name = (substr(path, 1, hl) == home) ? "~" substr(path, hl + 1) : path
+    i++
+    idx = (i <= 9) ? i : ""
+    uses = (score + 0 != 0) ? pyround(score + 0) "" : ""
+    printf "%s\t%s\n", name, fmt(idx, zicon, name, "", "", uses, "")
+  }
+}
+'

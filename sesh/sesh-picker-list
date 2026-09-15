@@ -1,0 +1,287 @@
+#!/usr/bin/env python3
+"""Enriched `sesh list` for the tmux fzf picker.
+
+Emits TAB-separated rows:  <ident>\t<display>
+  * ident   -> passed to `sesh connect` / `tmux kill-session` (fzf field {1})
+  * display -> icon + name + metrics, a single aligned fzf field (shown via
+               --with-nth=2), so column padding is preserved.
+
+Metric columns (live tmux sessions only, blank otherwise):
+  win      window count            (tmux #{session_windows})
+  used     last activity, relative (tmux #{session_activity})
+  created  creation date           (tmux #{session_created})
+  uses     zoxide frecency score for the session's dir (NOT a literal attach
+           count -- tmux does not track one; this is the closest access signal)
+
+Any flags (-t/-c/-z/-b ...) are passed through to `sesh list` so fzf source
+reloads keep the same schema. `--icons` is consumed here (icons are rendered
+by this script), not forwarded.
+"""
+import json
+import os
+import subprocess
+import sys
+import time
+
+FLAGS = [a for a in sys.argv[1:] if a != "--icons"]
+
+# --sesh-fifo PATH: read `sesh list --json` from a FIFO the caller already started
+# rather than spawning sesh here. Kept because it is harmless and occasionally
+# useful, but NOT used by sesh-popup: the idea was to overlap the sesh binary's
+# ~25ms startup with this interpreter's ~21ms, since only a running Python could
+# otherwise spawn sesh. Measured over 9 runs it was a regression -- 70ms without
+# the FIFO, 79ms with it -- because mkfifo plus the extra fork and pipe I/O cost
+# more than the overlap saves. Left in so the measurement is not repeated.
+SESH_FIFO = None
+if "--sesh-fifo" in FLAGS:
+    i = FLAGS.index("--sesh-fifo")
+    if i + 1 < len(FLAGS):
+        SESH_FIFO = FLAGS[i + 1]
+    FLAGS = FLAGS[:i] + FLAGS[i + 2:]
+
+# Single-width nerd-font glyphs per source (fall back to a space).
+ICON = {"tmux": "\ue795", "zoxide": "\uf07b", "config": "\ue615", "tmuxinator": "\uf085"}
+
+NAME_W = 50  # name column width (~2x the original 24)
+
+
+def fmt(idx, icon, name, used, crt, uses, win):
+    """One row layout, shared by data rows and the header so columns always line
+    up. idx = 1-based index shown for the first 9 rows (blank otherwise)."""
+    return (f"{idx:>2}  {icon}  {name[:NAME_W]:<{NAME_W}} "
+            f"{used:>4}  {crt:>7}  {uses:>5}  {win:>4}")
+
+
+def run(cmd):
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True).stdout
+    except Exception:
+        return ""
+
+
+def run_parallel(cmds):
+    """Run independent commands concurrently, returning stdout in input order.
+
+    sesh/tmux/zoxide were queried one after another, costing the sum of the three
+    (56 + 2 + 12 ms) when they depend on nothing. Spawned with bare Popen rather
+    than a thread pool on purpose: `from concurrent.futures import
+    ThreadPoolExecutor` costs more to import (~16ms measured, 77ms -> 94ms overall)
+    than the 15ms of waiting it saves. Popen needs no import that subprocess has
+    not already paid for.
+    """
+    procs = []
+    for cmd in cmds:
+        try:
+            procs.append(subprocess.Popen(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True))
+        except Exception:
+            procs.append(None)
+    out = []
+    for pr in procs:
+        if pr is None:
+            out.append("")
+            continue
+        try:
+            out.append(pr.communicate()[0] or "")
+        except Exception:
+            out.append("")
+    return out
+
+
+def header_lines():
+    """The two pinned header rows: column labels + key legend.
+
+    Emitted as the first two lines of normal output and consumed by fzf's
+    --header-lines, rather than by a separate `--header-only` run. That run was a
+    whole Python interpreter (31ms, over a quarter of the picker's load time)
+    producing two constant strings. Each line carries a leading TAB so that
+    --delimiter/--with-nth=2 finds the text in field 2, exactly like a data row.
+    """
+    cols = "  " + fmt("#", " ", "name", "used", "created", "uses", "win")
+    keys = "     1-9 jump   ^a all  ^t tmux  ^g cfg  ^x zoxide  ^f find  ^d kill"
+    return f"\t{cols}\n\t{keys}\n"
+
+
+# --find: directory search (ctrl-f in the picker). Emit the same 2-field schema
+# so fzf's --delimiter/--with-nth parsing stays consistent across reloads.
+# Uses `find` (fd isn't installed here); skips hidden dirs under $HOME.
+if "--find" in FLAGS:
+    sys.stdout.write(header_lines())
+    base = os.path.expanduser("~")
+    for line in run(["find", "-L", base, "-maxdepth", "2", "-type", "d"]).splitlines():
+        p = line.rstrip("/")
+        if not p or "/." in p[len(base):]:
+            continue
+        sys.stdout.write(f"{p}\t{ICON['zoxide']}  {p}\n")
+    sys.exit(0)
+
+# --header-only: emit the two fzf header lines (column labels + key legend),
+# built with fmt() so the labels line up with the data columns. The leading 2
+# spaces account for fzf's pointer gutter; " " stands in for the source icon.
+if "--header-only" in FLAGS:
+    sys.stdout.write(header_lines())
+    sys.exit(0)
+
+
+# sesh entries (respect source flags, and their order = tmux first by default),
+# tmux metadata and zoxide scores are three independent queries -> run them at once.
+# Fast path: skip `sesh list` and build the entry list from tmux + zoxide, which
+# are already being queried here for the metric columns.
+#
+# `sesh` costs ~25ms purely to start (`sesh list --json -c` returns "null" and
+# still takes 24.9ms), and on this machine it contributes nothing beyond those two
+# sources: the full list is 3 tmux + 64 zoxide, config and tmuxinator are both
+# null, and there is no sesh config file. Rebuilding from the raw sources
+# reproduced sesh's own output exactly -- 67/67 entries, same (source, name) order.
+#
+# Guarded, because that equivalence holds only while sesh has nothing else to add:
+# any source flag (-t/-c/-z/... from the picker's ctrl-a/t/g/x reloads) or the
+# appearance of a sesh config file sends us back to asking sesh.
+SESH_CONFIGS = [
+    os.path.expanduser("~/.config/sesh/sesh.toml"),
+    os.path.expanduser("~/.sesh.toml"),
+    "sesh.toml",
+]
+USE_FAST_PATH = (
+    SESH_FIFO is None
+    and not FLAGS
+    and not any(os.path.exists(c) for c in SESH_CONFIGS)
+)
+
+_cmds = [
+    ["tmux", "list-sessions", "-F",
+     "#{session_name}\t#{session_windows}\t#{session_created}\t#{session_activity}"
+     "\t#{session_path}"],
+    ["zoxide", "query", "--list", "--score"],
+]
+if SESH_FIFO is None and not USE_FAST_PATH:
+    _cmds.insert(0, ["sesh", "list", "--json", *FLAGS])
+
+_outs = run_parallel(_cmds)
+
+if USE_FAST_PATH:
+    _sesh_out, (_tmux_out, _zoxide_out) = None, _outs
+elif SESH_FIFO is None:
+    _sesh_out, _tmux_out, _zoxide_out = _outs
+else:
+    _tmux_out, _zoxide_out = _outs
+    try:
+        # Blocks until the caller's `sesh list` closes the pipe.
+        with open(SESH_FIFO, "r") as fh:
+            _sesh_out = fh.read()
+    except OSError:
+        _sesh_out = run(["sesh", "list", "--json", *FLAGS])
+
+if USE_FAST_PATH:
+    # Same shape sesh emits, limited to the keys consumed below: tmux sessions in
+    # tmux order first, then zoxide paths in zoxide (frecency) order.
+    _home = os.path.expanduser("~")
+    entries = []
+    # Most recently active first, matching `sesh list`. tmux's own output is
+    # alphabetical by name, which silently disagreed the moment the two orders
+    # diverged (see the parity note in check-picker-parity).
+    _tmux_rows = []
+    for _line in _tmux_out.splitlines():
+        _p = _line.split("\t")
+        if _p and _p[0]:
+            try:
+                _act = int(_p[3]) if len(_p) > 3 else 0
+            except ValueError:
+                _act = 0
+            _tmux_rows.append((_act, _p[0], _p[4] if len(_p) > 4 else ""))
+    # sorted() is stable, so equal activity keeps tmux's alphabetical order
+    for _act, _name, _spath in sorted(_tmux_rows, key=lambda r: -r[0]):
+        # Path matters: the `uses` column is the zoxide frecency score for the
+        # session's directory. Passing "" here silently blanked that column for every
+        # tmux session, and the equality check missed it because no session cwd
+        # happened to be in the zoxide DB at the time (caught by check-picker-parity).
+        entries.append({"Src": "tmux", "Name": _name, "Path": _spath})
+    for _line in _zoxide_out.splitlines():
+        _parts = _line.strip().split(None, 1)
+        if len(_parts) == 2:
+            _score, _path = _parts
+            _name = ("~" + _path[len(_home):]) if _path.startswith(_home) else _path
+            try:
+                _sc = float(_score)
+            except ValueError:
+                _sc = 0.0
+            entries.append({"Src": "zoxide", "Name": _name, "Path": _path,
+                            "Score": _sc})
+else:
+    try:
+        # `or []` guards the null case: a source with no entries (e.g. `sesh list
+        # --json -c` with no sesh config) prints "null", which parses to None and
+        # is not iterable. This crashed the ctrl-g/config reload.
+        entries = json.loads(_sesh_out or "[]") or []
+    except json.JSONDecodeError:
+        entries = []
+
+# tmux per-session metadata, keyed by session name
+tmeta = {}
+for line in _tmux_out.splitlines():
+    p = line.split("\t")
+    # >= 4, not == 4: session_path was appended as a 5th field and an exact-count
+    # test silently emptied tmeta, blanking the used/created/win columns.
+    if len(p) >= 4:
+        try:
+            tmeta[p[0]] = (int(p[1]), int(p[2]), int(p[3]))
+        except ValueError:
+            pass
+
+# zoxide frecency score, keyed by resolved absolute path
+zscore = {}
+for line in _zoxide_out.splitlines():
+    line = line.strip()
+    if not line:
+        continue
+    parts = line.split(None, 1)
+    if len(parts) == 2:
+        try:
+            zscore[os.path.realpath(parts[1])] = float(parts[0])
+        except (ValueError, OSError):
+            pass
+
+sys.stdout.write(header_lines())
+
+now = time.time()
+
+
+def rel(epoch):
+    if not epoch:
+        return ""
+    d = max(0, int(now - epoch))
+    if d < 60:
+        return f"{d}s"
+    if d < 3600:
+        return f"{d // 60}m"
+    if d < 86400:
+        return f"{d // 3600}h"
+    if d < 604800:
+        return f"{d // 86400}d"
+    return f"{d // 604800}w"
+
+
+def created(epoch):
+    return time.strftime("%b %d", time.localtime(epoch)) if epoch else ""
+
+
+for i, e in enumerate(entries):
+    src = e.get("Src", "")
+    name = e.get("Name", "")
+    path = e.get("Path", "")
+    icon = ICON.get(src, " ")
+    win = last = crt = uses = ""
+
+    if src == "tmux" and name in tmeta:
+        w, c, a = tmeta[name]
+        win, last, crt = f"{w}w", rel(a), created(c)
+    elif e.get("Windows"):
+        win = f"{e['Windows']}w"
+
+    rp = os.path.realpath(path) if path else ""
+    sc = e.get("Score", 0) or zscore.get(rp, 0)
+    if sc:
+        uses = str(int(round(sc)))
+
+    display = fmt(str(i + 1) if i < 9 else "", icon, name, last, crt, uses, win)
+    sys.stdout.write(f"{name}\t{display}\n")

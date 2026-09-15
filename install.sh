@@ -4,7 +4,7 @@
 # Usage:
 #   bash install.sh                 # install deps, then tmux + nvim configs
 #   bash install.sh --no-deps       # skip dependency installation (configs only)
-#   bash install.sh --tmux-only     # deps + tmux config only
+#   bash install.sh --tmux-only     # deps + tmux config + sesh picker only
 #   bash install.sh --nvim-only     # deps + nvim config only
 #
 # Windows (native): dependency install is separate — run in PowerShell:
@@ -17,6 +17,7 @@ DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DO_DEPS=true
 DO_TMUX=true
 DO_NVIM=true
+# The sesh picker is tmux-only, so it follows DO_TMUX rather than getting its own flag.
 
 for arg in "$@"; do
   case "$arg" in
@@ -57,6 +58,15 @@ if $DO_TMUX; then
   bash "$DOTFILES_DIR/scripts/install-tmux.sh"
 fi
 
+if $DO_TMUX; then
+  echo ""
+  echo "--- Installing sesh session picker ---"
+  # Non-fatal: a missing sesh/fzf should not abort the rest of the install, and the
+  # tmux config works without it (you just lose <prefix> s).
+  bash "$DOTFILES_DIR/scripts/install-sesh.sh" || \
+    echo "  [!] sesh picker skipped — see scripts/install-sesh.sh output above"
+fi
+
 if $DO_NVIM; then
   echo ""
   echo "--- Installing Neovim config ---"
@@ -68,4 +78,5 @@ echo "=========================================="
 echo "  All done!"
 echo "  - Start tmux, then press  Ctrl-a  Shift-I  to install plugins"
 echo "  - Open nvim — plugins auto-install on first launch"
+echo "  - Press  Ctrl-a  s  for the sesh session picker"
 echo "=========================================="
