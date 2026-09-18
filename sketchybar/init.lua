@@ -89,7 +89,11 @@ SBAR.default({
   scroll_texts = true,
 })
 
-SBAR.exec("killall stats_provider >/dev/null; stats_provider --cpu usage --memory ram_usage --network en0 --interval 1 --no-units", function()
+-- Use an absolute path: SketchyBar reloads triggered by launchd or the
+-- sketchybar-toggle daemon run with a minimal PATH that lacks /opt/homebrew/bin,
+-- so a bare `stats_provider` restart fails silently and the CPU/RAM counters
+-- freeze. `pkill -x` avoids killing unrelated processes.
+SBAR.exec("pkill -x stats_provider >/dev/null 2>&1; /opt/homebrew/bin/stats_provider --cpu usage --memory ram_usage --network en0 --interval 1 --no-units >/dev/null 2>&1 &", function()
   LOG:info("Started stats_provider_rust")
 end)
 

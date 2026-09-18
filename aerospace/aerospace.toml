@@ -65,6 +65,10 @@ ctrl-cmd-left = 'resize width -50' #left
 ctrl-cmd-right = 'resize width +50' #right
 ctrl-cmd-up = 'resize height +50'
 ctrl-cmd-down = 'resize height -50'
+ctrl-shift-h = 'resize width -50' #left
+ctrl-shift-l = 'resize width +50' #right
+ctrl-shift-j = 'resize height +50'
+ctrl-shift-k = 'resize height -50'
 
 # Workspaces: win + 1-9 to switch
 ctrl-1 = 'workspace 1'
