@@ -16,11 +16,12 @@ default-root-container-orientation = 'auto'
 on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
 
 # Sketchybar (Efterklang config) : notify on workspace focus change
-exec-on-workspace-change = ['/bin/bash', '-c', '/opt/homebrew/bin/sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE PREV_WORKSPACE=$AEROSPACE_PREV_WORKSPACE']
+exec-on-workspace-change = ['/bin/bash', '-c', '/opt/homebrew/bin/sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE PREV_WORKSPACE=$AEROSPACE_PREV_WORKSPACE; /bin/bash /Users/bschur/.config/aerospace/grid-workspace.sh 9 --if-changed']
 
 # Sketchybar : notify on window focus change (drives the focused-window state icon)
 # NOTE: AeroSpace callbacks run with a minimal PATH, so call sketchybar by absolute path.
-on-focus-changed = ['exec-and-forget /opt/homebrew/bin/sketchybar --trigger aerospace_focus_change']
+# Also re-grid workspace 9 if its set of windows changed (no-op otherwise).
+on-focus-changed = ['exec-and-forget /opt/homebrew/bin/sketchybar --trigger aerospace_focus_change', 'exec-and-forget /bin/bash /Users/bschur/.config/aerospace/grid-workspace.sh 9 --if-changed']
 
 # Sketchybar : notify on binding-mode change (drives the mode indicator)
 on-mode-changed = ['exec-and-forget /opt/homebrew/bin/sketchybar --trigger aerospace_mode_change MODE=$AEROSPACE_MODE']
@@ -48,11 +49,30 @@ outer.right =      5
 alt-shift-enter = 'exec-and-forget open -n /Applications/Alacritty.app'
 alt-q = 'close'
 
+# Flameshot screenshot — macOS has no built-in Flameshot global hotkey, so bind one here.
+# ctrl-shift-4: full capture GUI (annotate, then save/copy via the toolbar buttons — in-overlay
+#   keyboard shortcuts like Ctrl+C do NOT work on macOS, see flameshot issue #1897, so use the mouse toolbar).
+# Both go through capture.sh, which first kills any hung (invisible) capture so the hotkey never gets stuck.
+ctrl-shift-4 = 'exec-and-forget /bin/bash /Users/bschur/.config/flameshot/capture.sh --path /Users/bschur/Photos/Screenshots'
+# ctrl-shift-` : quick grab — drag a region and on release it is copied to the clipboard and the overlay closes.
+ctrl-shift-backtick = 'exec-and-forget /bin/bash /Users/bschur/.config/flameshot/capture.sh --accept-on-select --clipboard'
+
+# Wisp Transcript Session (long-form) — Wisp 2.9 removed its shortcut, so alt-shift-e clicks the
+# menu bar item to start/stop a session. Sits next to Wisp's own dictate key (alt-e).
+# NOTE: the physical key press is caught by Karabiner-Elements (~/.config/karabiner/karabiner.json,
+# rule "Wisp transcript session"), which runs 'aerospace trigger-binding --mode main alt-shift-e'.
+# Pressed directly, the key never reached AeroSpace unless a Wisp window was open. Karabiner sees
+# keys before any app, so this works globally. The osascript still runs under AeroSpace's permissions.
+alt-shift-e = 'exec-and-forget /usr/bin/osascript /Users/bschur/.config/aerospace/wisp-transcript-session.applescript'
+
+# Re-grid the workspace 9 parking area on demand
+alt-shift-g = 'exec-and-forget /bin/bash /Users/bschur/.config/aerospace/grid-workspace.sh 9'
+
 # Focus windows with alt + h/j/k/l
-ctrl-h = 'focus --boundaries all-monitors-outer-frame left'
-ctrl-j = 'focus --boundaries all-monitors-outer-frame down'
-ctrl-k = 'focus --boundaries all-monitors-outer-frame up'
-ctrl-l = 'focus --boundaries all-monitors-outer-frame right'
+ctrl-shift-h = 'focus --boundaries all-monitors-outer-frame left'
+ctrl-shift-j = 'focus --boundaries all-monitors-outer-frame down'
+ctrl-shift-k = 'focus --boundaries all-monitors-outer-frame up'
+ctrl-shift-l = 'focus --boundaries all-monitors-outer-frame right'
 
 # swap windows
 ctrl-shift-left  = 'move --boundaries all-monitors-outer-frame left'
@@ -65,10 +85,6 @@ ctrl-cmd-left = 'resize width -50' #left
 ctrl-cmd-right = 'resize width +50' #right
 ctrl-cmd-up = 'resize height +50'
 ctrl-cmd-down = 'resize height -50'
-ctrl-shift-h = 'resize width -50' #left
-ctrl-shift-l = 'resize width +50' #right
-ctrl-shift-j = 'resize height +50'
-ctrl-shift-k = 'resize height -50'
 
 # Workspaces: win + 1-9 to switch
 ctrl-1 = 'workspace 1'
@@ -146,36 +162,70 @@ ctrl-v = ['layout tiles horizontal vertical', 'exec-and-forget /opt/homebrew/bin
 # if.app-id = 'com.apple.ActivityMonitor'
 # run = 'layout floating'
 
+# -----------------------------------------------------------------------------
+# Workspace 9 = "parking" workspace for infrequently reviewed but necessary
+# windows. They are TILED IN A GRID (not floating, not accordion) so every one
+# is visible at a glance: 4 windows -> 2x2, 6 -> 3x2, 3 -> 2+1, etc.
+# Members: Cisco VPN, Zoom (non-meeting windows), and Wisp transcripts.
+#
+# AeroSpace has no native grid layout, so grid-workspace.sh builds one
+# (root h_tiles with one v_tiles column per grid column). It runs:
+#   - after each parking rule below (new window detected), and
+#   - from on-focus-changed / exec-on-workspace-change with --if-changed, so
+#     the grid re-flows when a parked window closes or is moved in/out.
+# Manual re-grid: alt-shift-g. 'layout tiling' guarantees the window isn't
+# floating (floating windows are left out of the grid).
+# -----------------------------------------------------------------------------
+
+# Cisco Secure Client / AnyConnect VPN -> parked in the workspace 9 grid
+[[on-window-detected]]
+if.app-id = "com.cisco.secureclient.gui"
+run = ['move-node-to-workspace 9', 'layout tiling', 'exec-and-forget /bin/bash /Users/bschur/.config/aerospace/grid-workspace.sh 9']
+
 [[on-window-detected]]
 if.app-id = "com.cisco.Secure-Client"
-run = "layout floating"
+run = ['move-node-to-workspace 9', 'layout tiling', 'exec-and-forget /bin/bash /Users/bschur/.config/aerospace/grid-workspace.sh 9']
 
 [[on-window-detected]]
 if.app-id = "com.cisco.anyconnect.gui"
-run = "layout floating"
+run = ['move-node-to-workspace 9', 'layout tiling', 'exec-and-forget /bin/bash /Users/bschur/.config/aerospace/grid-workspace.sh 9']
 
 [[on-window-detected]]
 if.app-id = "com.cisco.anyconnect.macos"
-run = "layout floating"
+run = ['move-node-to-workspace 9', 'layout tiling', 'exec-and-forget /bin/bash /Users/bschur/.config/aerospace/grid-workspace.sh 9']
 
 [[on-window-detected]]
 if.app-name-regex-substring = 'Cisco Secure Client'
+run = ['move-node-to-workspace 9', 'layout tiling', 'exec-and-forget /bin/bash /Users/bschur/.config/aerospace/grid-workspace.sh 9']
+
+# Flameshot capture overlay must float (never tiled) so it can cover the screen
+[[on-window-detected]]
+if.app-id = 'org.flameshot.Flameshot'
 run = 'layout floating'
 
-# Zoom meeting on top of zoom workplace
+# Zoom MEETING window -> workspace 2, tiled SIDE-BY-SIDE (h_tiles) as the LEFT window.
+# Listed BEFORE the general Zoom rule on purpose: AeroSpace runs only the FIRST
+# matching on-window-detected callback, so this specific title match wins and
+# the "park on 9" rule below is skipped for meeting windows.
+# NOTE: Zoom's bundle id is us.zoom.xos (list-windows shows app-name "Zoom").
+# Zoom usually sets the "Zoom Meeting" title AFTER the window appears, so this
+# rule often misses; zoom-route.sh (called from the rule below) catches those.
 [[on-window-detected]]
-if.app-name-regex-substring = 'zoom\.us'
+if.app-id = 'us.zoom.xos'
 if.window-title-regex-substring = 'Zoom Meeting'
-run = 'fullscreen'
+run = ['move-node-to-workspace 2', 'layout tiling', 'layout h_tiles', 'exec-and-forget /bin/bash /Users/bschur/.config/aerospace/zoom-route.sh']
 
-# Wisp
+# Any other Zoom window (e.g. "Zoom Workplace" / main window) -> parked on 9.
+# zoom-route.sh then watches the title for a few seconds and re-routes the
+# window to workspace 2 (h_tiles) if it turns out to be a meeting.
+[[on-window-detected]]
+if.app-id = 'us.zoom.xos'
+run = ['move-node-to-workspace 9', 'layout tiling', 'exec-and-forget /bin/bash /Users/bschur/.config/aerospace/zoom-route.sh']
+
+# Wisp transcripts -> parked & tiled on workspace 9 (alongside VPN + Zoom)
 [[on-window-detected]]
 if.app-name-regex-substring = 'Wisp'
-run = [
-    'move-node-to-workspace 4',
-    'layout floating tiling',   # Explicitly forces a toggle from floating to tiling
-    'fullscreen on'
-]
+run = ['move-node-to-workspace 9', 'layout tiling', 'exec-and-forget /bin/bash /Users/bschur/.config/aerospace/grid-workspace.sh 9']
 
 # =============================================================================
 #
