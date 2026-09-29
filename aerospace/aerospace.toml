@@ -1,7 +1,12 @@
 # Start AeroSpace at login
 start-at-login = true
 config-version = 2
-after-startup-command = ['exec-and-forget sketchybar']
+# After startup: start SketchyBar, then re-apply window frames at 3s and 10s so
+# windows restored at launch (e.g. Outlook) don't stay stretched across monitors.
+after-startup-command = [
+    'exec-and-forget sketchybar',
+    'exec-and-forget /bin/bash /Users/bschur/.config/aerospace/relayout-all.sh 3 10',
+]
 
 # Normalizations
 enable-normalization-flatten-containers = true
@@ -67,6 +72,9 @@ alt-shift-e = 'exec-and-forget /usr/bin/osascript /Users/bschur/.config/aerospac
 
 # Re-grid the workspace 9 parking area on demand
 alt-shift-g = 'exec-and-forget /bin/bash /Users/bschur/.config/aerospace/grid-workspace.sh 9'
+
+# Re-apply window frames on all visible workspaces (fixes windows stretched across monitors)
+alt-shift-r = 'exec-and-forget /bin/bash /Users/bschur/.config/aerospace/relayout-all.sh'
 
 # Focus windows with alt + h/j/k/l
 ctrl-shift-h = 'focus --boundaries all-monitors-outer-frame left'
