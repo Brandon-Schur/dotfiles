@@ -9,7 +9,7 @@ enable-normalization-opposite-orientation-for-nested-containers = true
 
 # Layout settings
 accordion-padding = 0
-default-root-container-layout = 'accordion' # tiles
+default-root-container-layout = 'tiles' # 'accordion' stacks windows on top of each other; overlap only via fullscreen (alt-f / ctrl-f)
 default-root-container-orientation = 'auto'
 
 # Mouse follows focus
@@ -138,17 +138,6 @@ ctrl-v = ['layout tiles horizontal vertical', 'exec-and-forget /opt/homebrew/bin
 
 # aerospace list-windows --all
 
-# # slack
-# [[on-window-detected]]
-#     if.app-id = 'com.tinyspeck.slackmacgap'
-#     run = ['move-node-to-workspace 1']
-
-# # Outlook
-# [[on-window-detected]]
-#     if.app-id = 'com.microsoft.Outlook'
-#     run = ['move-node-to-workspace 5']
-
-
 # # # Floating windows for system apps
 # # [[on-window-detected]]
 # # if.app-id = 'com.apple.finder'
@@ -226,6 +215,53 @@ run = ['move-node-to-workspace 9', 'layout tiling', 'exec-and-forget /bin/bash /
 [[on-window-detected]]
 if.app-name-regex-substring = 'Wisp'
 run = ['move-node-to-workspace 9', 'layout tiling', 'exec-and-forget /bin/bash /Users/bschur/.config/aerospace/grid-workspace.sh 9']
+
+# =============================================================================
+#
+# App -> Workspace Mappings
+# Every new window of these apps opens on its home workspace. Snapshot of where
+# apps lived on 2026-09-28. VPN/Zoom/Wisp are handled in the rules above.
+# Find an app's id with: aerospace list-windows --all --format '%{app-bundle-id} | %{app-name}'
+# app-id is an EXACT match, so the Vivaldi "Dashboard" web app (its own id)
+# is not caught by the plain Vivaldi rule.
+#
+# =============================================================================
+
+# Workspace 1 — Slack
+[[on-window-detected]]
+if.app-id = 'com.tinyspeck.slackmacgap'
+run = 'move-node-to-workspace 1'
+
+# Workspace 2 — Vivaldi (main browser)
+[[on-window-detected]]
+if.app-id = 'com.vivaldi.Vivaldi'
+run = 'move-node-to-workspace 2'
+
+# Workspace 3 — Alacritty. Only the FIRST terminal is sent to 3. Extra
+# terminals (alt-shift-enter) stay on the workspace they were opened from.
+[[on-window-detected]]
+if.app-id = 'org.alacritty'
+run = 'exec-and-forget /bin/bash /Users/bschur/.config/aerospace/first-window-to-workspace.sh org.alacritty 3'
+
+# Workspace 5 — Outlook + Vivaldi "Dashboard" web app
+[[on-window-detected]]
+if.app-id = 'com.microsoft.Outlook'
+run = 'move-node-to-workspace 5'
+
+[[on-window-detected]]
+if.app-id = 'com.vivaldi.Vivaldi.app.mcijphhnflbofdapglafogoladjmgfge'
+run = 'move-node-to-workspace 5'
+
+# Workspace 7 — Spotify
+[[on-window-detected]]
+if.app-id = 'com.spotify.client'
+run = 'move-node-to-workspace 7'
+
+# Obsidian — intentionally NOT mapped (moved by hand). To pin it, uncomment
+# and set the workspace number:
+# [[on-window-detected]]
+# if.app-id = 'md.obsidian'
+# run = 'move-node-to-workspace 4'
 
 # =============================================================================
 #
