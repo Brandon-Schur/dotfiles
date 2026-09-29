@@ -1,6 +1,7 @@
 # dotfiles
 
-Personal terminal and editor configuration — **tmux** + **Neovim** (AstroNvim).
+Personal terminal and editor configuration — **tmux** + **Neovim** (AstroNvim) — plus
+macOS audio routing.
 
 **Theme:** Custom colorscheme across tmux, Neovim, and Alacritty.
 
@@ -13,6 +14,7 @@ Personal terminal and editor configuration — **tmux** + **Neovim** (AstroNvim)
 | **tmux** | Custom colorscheme over catppuccin v2 status layout |
 | **sesh picker** | fzf session picker on `prefix s` — sessions ordered by last use, with a metrics table |
 | **Neovim** | AstroNvim v5 with custom colorscheme, git tools, LSP, and formatters |
+| **audio-priority** (macOS) | Picks the default speaker/mic by priority as devices come and go, and feeds Loopback's Meeting Capture (all system audio + current mic) for a transcription app. Installed separately; see [`audio-priority/README.md`](audio-priority/README.md) |
 
 ### Neovim plugins
 
@@ -189,6 +191,16 @@ Then set **JetBrainsMono Nerd Font** in Windows Terminal settings.
 # In PowerShell as Administrator:
 wsl --install
 # Reboot if prompted, open Ubuntu, then run the macOS/Linux one-liner above.
+```
+
+### macOS audio (audio-priority)
+
+Not part of `install.sh`, because it needs Loopback, BlackHole, and a one-time manual
+permission step. Follow [`audio-priority/README.md`](audio-priority/README.md) → "Set up on a new Mac":
+
+```bash
+brew install blackhole-2ch
+bash ~/dotfiles/audio-priority/install.sh
 ```
 
 ---

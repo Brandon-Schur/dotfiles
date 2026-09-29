@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!-- Embedded into the binary by install.sh. macOS needs the bundle ID and usage string
+     to show (and remember) the System Audio Recording permission for the daemon. -->
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>com.bschur.audio-priority</string>
+    <key>CFBundleName</key>
+    <string>audio-priority</string>
+    <key>NSAudioCaptureUsageDescription</key>
+    <string>audio-priority mirrors all system audio into BlackHole so Loopback can record every app.</string>
+</dict>
+</plist>
