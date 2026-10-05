@@ -235,7 +235,8 @@ nvim                         # lazy.nvim auto-installs all plugins on first open
 |---|---|
 | `prefix \|` | Split pane horizontally |
 | `prefix -` | Split pane vertically |
-| `prefix h/j/k/l` | Resize pane (repeatable) |
+| `prefix h/j/k/l` | Focus pane left/down/up/right (repeatable; arrow keys also work) |
+| `prefix u/i/o/p` | Resize pane left/down/up/right (repeatable) |
 | `prefix Ctrl-a` | Cycle through panes |
 | `prefix n` | Next window |
 | `prefix N` | Previous window |
