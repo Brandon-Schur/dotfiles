@@ -2,6 +2,10 @@ M = {}
 
 M.update_graph = function(percentage_str, sketchybar_item, label_string)
   local percentage_int = tonumber(percentage_str)
+  -- Ignore malformed values instead of erroring inside the event loop.
+  if not percentage_int then
+    return
+  end
   sketchybar_item:push({ percentage_int / 100. })
   local color = COLORS.blue
   if percentage_int > 30 then

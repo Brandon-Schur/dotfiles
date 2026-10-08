@@ -33,6 +33,9 @@ local download_speed = SBAR.add("item", "widgets.download_speed", {
 
 local function format_speed(speed_str)
   local speed = tonumber(speed_str)
+  if not speed then
+    return "0 KB/s"
+  end
   if speed < 1024 then
     return string.format("%d KB/s", speed)
   elseif speed < 1024 * 1024 then

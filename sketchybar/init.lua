@@ -93,8 +93,39 @@ SBAR.default({
 -- sketchybar-toggle daemon run with a minimal PATH that lacks /opt/homebrew/bin,
 -- so a bare `stats_provider` restart fails silently and the CPU/RAM counters
 -- freeze. `pkill -x` avoids killing unrelated processes.
-SBAR.exec("pkill -x stats_provider >/dev/null 2>&1; /opt/homebrew/bin/stats_provider --cpu usage --memory ram_usage --network en0 --interval 1 --no-units >/dev/null 2>&1 &", function()
+local STATS_PROVIDER_CMD =
+  "/opt/homebrew/bin/stats_provider --cpu usage --memory ram_usage --network en0 --interval 1 --no-units >/dev/null 2>&1 &"
+
+SBAR.exec("pkill -x stats_provider >/dev/null 2>&1; " .. STATS_PROVIDER_CMD, function()
   LOG:info("Started stats_provider_rust")
+end)
+
+-- Watchdog: stats_provider can die or stop emitting (e.g. around sleep/wake)
+-- while SketchyBar keeps running, which freezes the CPU/RAM/network widgets.
+-- The launch above also doesn't reliably survive `sketchybar --reload`.
+-- At startup, every 10s, and on wake: relaunch it if it's not running, and
+-- force-restart it if no system_stats event has arrived for 15s (hung).
+local STATS_STALE_SECS = 15
+local last_stats_at = os.time()
+
+local stats_watchdog = SBAR.add("item", "stats_provider.watchdog", {
+  drawing = false,
+  updates = "on",
+  update_freq = 10,
+})
+
+stats_watchdog:subscribe("system_stats", function()
+  last_stats_at = os.time()
+end)
+
+stats_watchdog:subscribe({ "forced", "routine", "system_woke" }, function()
+  if os.time() - last_stats_at > STATS_STALE_SECS then
+    LOG:info("stats_provider stale; restarting")
+    last_stats_at = os.time()
+    SBAR.exec("pkill -x stats_provider >/dev/null 2>&1; " .. STATS_PROVIDER_CMD)
+  else
+    SBAR.exec("pgrep -x stats_provider >/dev/null 2>&1 || { " .. STATS_PROVIDER_CMD .. " }")
+  end
 end)
 
 require("items")
