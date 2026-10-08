@@ -5,7 +5,7 @@
 # so the title-based on-window-detected rule usually misses it and the window
 # falls through to the "park on 9" rule. This script (run via exec-and-forget
 # from that rule) polls the title for a few seconds; if it turns into a
-# meeting window it goes to workspace 2 tiled side-by-side (h_tiles) as the
+# meeting window it goes to workspace $MEETING_WS (4) tiled side-by-side (h_tiles) as the
 # LEFT window at MEETING_WIDTH_PCT of the monitor width, then workspace 9 is
 # re-gridded.
 #
@@ -14,11 +14,11 @@
 
 AEROSPACE=/opt/homebrew/bin/aerospace
 DIR="$(cd "$(dirname "$0")" && pwd)"
-MEETING_WS=2
+MEETING_WS=4
 PARK_WS=9
 MEETING_RE='Zoom Meeting'
 # Default width of the meeting window, as a % of its monitor's width.
-# 28% ≈ 860pt on the 3072pt-wide Odyssey G7. Vivaldi gets the rest.
+# 28% ≈ 860pt on a 3072pt-wide monitor. The other windows get the rest.
 MEETING_WIDTH_PCT=28
 
 # Width in points of the monitor with the given name (NSScreen via JXA; no
@@ -47,7 +47,7 @@ size_meeting() {
 route_meetings() {
     # Reads "id workspace title" for candidate Zoom windows, moves meeting ones.
     # A freshly detected window ($AEROSPACE_WINDOW_ID) is placed even if the
-    # title rule already put it on workspace 2 (it still needs to go left).
+    # title rule already put it on $MEETING_WS (it still needs to go left).
     local moved=1 id ws title
     while read -r id ws title; do
         [ -z "$id" ] && continue

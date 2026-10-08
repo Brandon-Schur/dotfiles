@@ -149,8 +149,6 @@ ctrl-shift-backtick = 'exec-and-forget /bin/bash ~/.config/flameshot/capture.sh 
 
 # Wisp transcript session (start/stop). Wisp 2.9 removed its own shortcut, so
 # this clicks the menu bar item. Runs under AeroSpace's Accessibility perms.
-# NOTE: the Karabiner rule "Wisp transcript session" still triggers the OLD
-# key (alt-shift-e) via 'aerospace trigger-binding'. Update or remove it.
 ctrl-shift-d = 'exec-and-forget /usr/bin/osascript ~/.config/aerospace/wisp-transcript-session.applescript'
 
 # --- Windows: close, fullscreen, float, orientation --------------------------
@@ -288,9 +286,8 @@ run = 'layout floating'
 # side (h_tiles) as the LEFT window at MEETING_WIDTH_PCT of the monitor.
 # Zoom usually sets the "Zoom Meeting" title AFTER the window appears, so the
 # title rule often misses; zoom-route.sh (called by both rules) polls the title
-# and routes the window to its MEETING_WS.
-# NOTE: this rule sends meetings to 4, but zoom-route.sh has MEETING_WS=2 and
-# moves them there. Keep the two in sync.
+# and routes the window to its MEETING_WS (4). If you change the meeting
+# workspace, change it in both places.
 
 [[on-window-detected]]
 if.app-id = 'us.zoom.xos'
