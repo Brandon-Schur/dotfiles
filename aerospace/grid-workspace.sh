@@ -48,22 +48,28 @@ fi
 trap 'rmdir "$LOCK" 2>/dev/null' EXIT
 
 build_grid() {
-    local ids n cols base extra i c k start size
-    "$AEROSPACE" flatten-workspace-tree --workspace "$WS"
+    local ids n cols base extra i c k start size cmds
     ids=($(tiled_ids))
     n=${#ids[@]}
     [ "$n" -eq 0 ] && return
 
-    # Root: side-by-side tiles (overrides the global accordion default).
-    "$AEROSPACE" layout --workspace "$WS" --root h_tiles >/dev/null 2>&1
+    # All tree edits are collected into ONE 'aerospace eval' call. The server
+    # runs the whole batch in a single session and lays windows out once at
+    # the end, so the intermediate states (flattened row, reorder shuffles,
+    # half-built columns) are never drawn. Separate CLI calls each triggered
+    # a layout pass, which made the windows jitter.
+    # ';' keeps going after a failed command (e.g. a 'move' at the edge).
+    cmds="flatten-workspace-tree --workspace $WS"
+    # Root: side-by-side tiles (overrides the global default).
+    cmds+="; layout --workspace $WS --root h_tiles"
 
     # list-windows does NOT return tree order (it's sorted by app), so impose
     # our order: push each window, in list order, all the way to the right.
-    # Afterwards the left-to-right tree order equals ${ids[@]}.
+    # Afterwards the left-to-right tree order equals ${ids[@]}. Extra moves
+    # past the edge fail harmlessly.
     for id in "${ids[@]}"; do
-        for ((k = 0; k < n; k++)); do
-            "$AEROSPACE" move --window-id "$id" --boundaries workspace \
-                --boundaries-action fail right >/dev/null 2>&1 || break
+        for ((k = 1; k < n; k++)); do
+            cmds+="; move --window-id $id --boundaries workspace --boundaries-action fail right"
         done
     done
 
@@ -77,22 +83,26 @@ build_grid() {
         size=$base; [ "$c" -lt "$extra" ] && size=$((base + 1))
         start=$i
         if [ "$size" -ge 2 ]; then
-            "$AEROSPACE" join-with --window-id "${ids[$start]}" right
+            cmds+="; join-with --window-id ${ids[$start]} right"
             for ((k = start + 2; k < start + size; k++)); do
-                "$AEROSPACE" move --window-id "${ids[$k]}" left
+                cmds+="; move --window-id ${ids[$k]} left"
             done
-            "$AEROSPACE" layout --window-id "${ids[$start]}" v_tiles >/dev/null 2>&1
+            cmds+="; layout --window-id ${ids[$start]} v_tiles"
         fi
         i=$((start + size))
     done
-    "$AEROSPACE" balance-sizes --workspace "$WS" 2>/dev/null
+    cmds+="; balance-sizes --workspace $WS"
+
+    "$AEROSPACE" eval "$cmds" >/dev/null 2>&1
     signature > "$SIG_FILE"
 }
 
-sleep 0.2  # let AeroSpace finish placing a just-detected window
+sleep 0.1  # let AeroSpace finish placing a just-detected window
 build_grid
+# Another trigger arrived mid-run: rebuild only if the window set actually
+# changed since the grid we just built (avoids a redundant second pass).
 while [ -e "$PENDING" ]; do
     rm -f "$PENDING"
-    sleep 0.2
-    build_grid
+    sleep 0.1
+    [ "$(signature)" = "$(cat "$SIG_FILE" 2>/dev/null)" ] || build_grid
 done
