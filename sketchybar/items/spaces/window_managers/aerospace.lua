@@ -25,14 +25,12 @@ local Window_Manager = {
   events = {
     focus_change = "aerospace_workspace_change",
     window_focus_change = "aerospace_focus_change",
-    mode_change = "aerospace_mode_change",
   },
 }
 
 local number_box = nil
 local apps_box = nil
 local state_box = nil
-local mode_box = nil
 
 -- Reflect the focused window's state: fullscreen / floating / tiled.
 local function update_state()
@@ -91,7 +89,6 @@ end
 function Window_Manager:init()
   -- Register the custom events AeroSpace fires (see aerospace.toml callbacks).
   SBAR.add("event", self.events.window_focus_change)
-  SBAR.add("event", self.events.mode_change)
 
   -- Current workspace number
   number_box = SBAR.add("item", "workspace.current", {
@@ -159,44 +156,9 @@ function Window_Manager:init()
     },
   })
 
-  -- Binding-mode indicator (e.g. "main", or a resize/service submode you add later)
-  mode_box = SBAR.add("item", "workspace.mode", {
-    position = "left",
-    padding_left = 4,
-    padding_right = 6,
-    icon = {
-      string = "main",
-      font = { family = FONT.label_font, style = FONT.style_map["Bold"], size = 13.0 },
-      color = COLORS.subtext0,
-      padding_left = 10,
-      padding_right = 10,
-    },
-    label = { drawing = false },
-    background = {
-      color = COLORS.surface0,
-      border_color = COLORS.surface1,
-      border_width = 2,
-      corner_radius = 6,
-      height = 26,
-    },
-  })
-
   -- Instant window-state updates when window focus changes.
   state_box:subscribe(self.events.window_focus_change, function()
     update_state()
-  end)
-
-  -- Mode indicator: highlight when not in the default "main" mode.
-  mode_box:subscribe(self.events.mode_change, function(env)
-    local mode = (env and env.MODE and env.MODE ~= "") and env.MODE or "main"
-    local is_main = mode == "main"
-    mode_box:set({
-      icon = {
-        string = mode,
-        color = is_main and COLORS.subtext0 or COLORS.peach,
-      },
-      background = { border_color = is_main and COLORS.surface1 or COLORS.peach },
-    })
   end)
 
   number_box:subscribe(self.events.focus_change, function(env)
