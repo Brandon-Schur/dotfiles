@@ -21,6 +21,9 @@ end
 if is_enabled("front_app") then
   safe_require("items.front_app.front_app")
 end
+if is_enabled("menubar_button") then
+  safe_require("items.menubar_button.menubar_button")
+end
 if is_enabled("calendar") then
   safe_require("items.calendar.calendar")
 end

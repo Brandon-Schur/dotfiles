@@ -36,7 +36,9 @@ SBAR.add("item", { position = "right", width = PADDINGS })
 
 cal_bracket:subscribe({ "forced", "routine", "system_woke" }, function(env)
   cal_date:set({ label = { string = os.date("%a %b %d") } })
-  cal_time:set({ label = { string = os.date("%H:%M:%S %p") } })
+  -- 12-hour clock; strip the leading zero from the hour (e.g. "1:05:03 PM").
+  local time_str = os.date("%I:%M:%S %p"):gsub("^0", "")
+  cal_time:set({ label = { string = time_str } })
 end)
 
 local function click_event()

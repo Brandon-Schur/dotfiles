@@ -23,19 +23,27 @@ SBAR.bar({
   y_offset = preset_conf.Y_OFFSET,
   margin = preset_conf.MARGIN,
   notch_width = 200,
-  -- Render above the native menu bar. Required by sketchybar-toggle so the bar
-  -- isn't drawn behind the menu bar. ("window" is distinct from "on".)
-  topmost = "window",
+  -- Render above the native menu bar (window layer 25 vs the menu bar's 24) so
+  -- the auto-hidden macOS menu bar can't slide over SketchyBar on hover.
+  -- ("window" only reaches layer 3, which is *below* the menu bar.) The native
+  -- bar is swapped in on demand via the menubar_button item.
+  topmost = "on",
   -- Draw only on the macOS Main display (your laptop). Using "main" instead of a
   -- numeric index keeps the bar on the laptop even when monitors are plugged in
   -- and macOS reshuffles display indices.
   display = "main",
 })
 
--- Coordinate with the native menu bar: hide SketchyBar when the mouse nears the
--- top so the menu bar appears cleanly (no overlap), then slide it back.
--- Requires the sketchybar-toggle binary (brew install malpern/tap/sketchybar-toggle).
-SBAR.exec("pkill -x sketchybar-toggle 2>/dev/null; command -v sketchybar-toggle >/dev/null 2>&1 && sketchybar-toggle --debounce 30 >/tmp/sketchybar-toggle.log 2>&1 &")
+-- The native menu bar is swapped in via the "menubar_button" item instead of
+-- mouse hover. It stays auto-hidden underneath SketchyBar (topmost = "on"),
+-- so hovering the top edge no longer hides SketchyBar.
+-- On (re)load: stop the old hover daemon / any running swap, and reset to
+-- SketchyBar-visible.
+SBAR.exec(
+  "pkill -x sketchybar-toggle 2>/dev/null; pkill -f '[m]enubar_toggle native' 2>/dev/null; "
+    .. HELPERS_HOME
+    .. "menubar_toggle/bin/menubar_toggle sketchy"
+)
 
 SBAR.default({
   updates = "when_shown",

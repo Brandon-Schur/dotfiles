@@ -2,8 +2,8 @@
 WINDOW_MANAGER = "aerospace"
 --- @type "gnix" | "compact"
 PRESET = "gnix"
---- @type "catppuccin_mocha" | "catppuccin_latte" | "rose_pine" | "tokyo_night" | "nord_light"
-THEME = "tokyo_night"
+--- @type "catppuccin_mocha" | "catppuccin_latte" | "rose_pine" | "tokyo_night" | "nord_light" | "snowflake"
+THEME = "snowflake"
 
 SBAR_HOME = (os.getenv("HOME") or "~") .. "/.config/sketchybar/"
 ITEMS_HOME = SBAR_HOME .. "items/"
@@ -27,11 +27,11 @@ PRESET_OPTIONS = {
 }
 
 FONT = {
-  icon_font = "Maple Mono NF CN",
-  label_font = "Maple Mono NF CN", -- mono nerd font (was RecMonoCasual Nerd Font)
+  icon_font = "JetBrainsMono Nerd Font Mono",
+  label_font = "JetBrainsMono Nerd Font Mono", -- Nerd Font Mono, matches Alacritty
   style_map = {
     ["Regular"] = "Regular",
-    ["Semibold"] = "Medium",
+    ["Semibold"] = "SemiBold",
     ["Bold"] = "Bold",
     ["Black"] = "ExtraBold",
   },
@@ -43,6 +43,7 @@ MODULES = {
   spaces = { enable = true },
   front_app = { enable = true },
   calendar = { enable = true },
+  menubar_button = { enable = true },
   battery = { enable = true, style = "icon" },
   wifi = { enable = true },
   volume = { enable = true },
