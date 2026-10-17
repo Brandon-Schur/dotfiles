@@ -84,11 +84,19 @@ for n in 1 2 3 4 5 6 7 8 9; do
     "$n:transform:[ -z \"\$FZF_QUERY\" ] && echo \"pos($n)+accept\" || echo \"put($n)\"")
 done
 
+# Search scope. Rows are  ident TAB prefix NBSP name NBSP metrics  (see SEP in
+# sesh-picker-list). --with-nth=2.. hides the ident; --nth=2 then searches the name
+# only, because fzf evaluates --nth against the --with-nth output, not the input.
+# The old `--with-nth=2 --nth=2` left one field after the transform, so field 2 was
+# empty and every non-empty query matched zero rows.
+# Sorted with --tiebreak=index, not --no-sort: a query ranks name matches by score
+# and keeps list order (recency / frecency) among ties. An empty query is never
+# sorted, so the 1-9 jump still indexes the unfiltered order.
 selection=$(
   { ts list_begin; $FAST; ts list_end; } | fzf \
     --header-lines=2 \
-    --layout=reverse --no-sort --ansi \
-    --delimiter='\t' --with-nth=2 --nth=2 \
+    --layout=reverse --ansi --tiebreak=index \
+    --delimiter='\t|\x{a0}' --with-nth=2.. --nth=2 \
     --border --border-label ' sesh ' --prompt '⚡  ' \
     --bind 'tab:down,btab:up' \
     ${timing_binds[@]+"${timing_binds[@]}"} \

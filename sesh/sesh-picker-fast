@@ -15,6 +15,11 @@ set -uo pipefail
 HOME_DIR="$HOME"
 TMUX_ICON=$''
 ZOXIDE_ICON=$''
+# Non-breaking space either side of the name column: renders as a space, but it is
+# the field separator that lets the picker's fzf --nth search the name alone.
+# Written as UTF-8 bytes rather than $'\u00a0', which bash only encodes in a UTF-8
+# locale. Must match sesh-picker-list's SEP.
+SEP=$'\xc2\xa0'
 
 # tmux and zoxide are independent; run them concurrently as sesh-picker-list does.
 tmux_out=$(mktemp); zox_out=$(mktemp)
@@ -32,13 +37,14 @@ wait "$tmux_pid" 2>/dev/null || true
 wait "$zox_pid" 2>/dev/null || true
 
 awk -v now="$(date +%s)" -v home="$HOME_DIR" \
-    -v ticon="$TMUX_ICON" -v zicon="$ZOXIDE_ICON" \
+    -v ticon="$TMUX_ICON" -v zicon="$ZOXIDE_ICON" -v sep="$SEP" \
     -v tmuxfile="$tmux_out" -v zoxfile="$zox_out" '
 function pad_left(s, w)  { return sprintf("%" w "s", s) }
 function pad_right(s, w) { return sprintf("%-" w "s", s) }
 # Mirrors sesh-picker-list.fmt(): idx>2, icon, name<50, used>4, created>7, uses>5, win>4
+# sep (NBSP) brackets the name so fzf --nth can search it alone; see SEP above.
 function fmt(idx, icon, name, used, crt, uses, win) {  # all params, no globals
-  return pad_left(idx,2) "  " icon "  " pad_right(substr(name,1,50),50) " " \
+  return pad_left(idx,2) "  " icon " " sep pad_right(substr(name,1,50),50) sep \
          pad_left(used,4) "  " pad_left(crt,7) "  " pad_left(uses,5) "  " pad_left(win,4)
 }
 # NOTE: every helper declares its scratch variables as trailing parameters. awk has
@@ -72,18 +78,40 @@ BEGIN {
   printf "\t%s\n", "     1-9 jump   ^a all  ^t tmux  ^g cfg  ^x zoxide  ^f find  ^d kill"
 
   # zoxide scores first: the tmux loop needs them for the uses column.
+  nz = 0
   while ((getline zline < zoxfile) > 0) {
     sub(/^[ \t]+/, "", zline); sub(/[ \t]+$/, "", zline)
     if (zline == "") continue
     if (match(zline, /[ \t]+/) == 0) continue
     zs = substr(zline, 1, RSTART - 1)
     zp = substr(zline, RSTART + RLENGTH)
-    if (zp != "") zscore[zp] = zs + 0
+    if (zp != "") { nz++; zsa[nz] = zs + 0; zpa[nz] = zp }
   }
   close(zoxfile)
+  nt = 0
+  while ((getline line < tmuxfile) > 0) tl[++nt] = line
+  close(tmuxfile)
+
+  # sesh and sesh-picker-list key scores by the RESOLVED path (os.path.realpath), so
+  # /home/u/workplace/d and /workplace/u/d are one directory, and when zoxide holds
+  # both spellings the one listed last (lowest score) wins. Resolve every zoxide and
+  # tmux session path in ONE realpath call (-m: like the non-strict os.path.realpath)
+  # rather than one process per path; fall back to the raw path if counts disagree.
+  np = 0; cmd = "realpath -m --"
+  for (j = 1; j <= nz; j++) if (!(zpa[j] in seen)) { seen[zpa[j]] = 1; pl[++np] = zpa[j] }
+  for (j = 1; j <= nt; j++) {
+    k = split(tl[j], q, "\t")
+    if (k >= 5 && q[5] != "" && !(q[5] in seen)) { seen[q[5]] = 1; pl[++np] = q[5] }
+  }
+  for (j = 1; j <= np; j++) { s = pl[j]; gsub(/\047/, "\047\\\047\047", s); cmd = cmd " \047" s "\047" }
+  nr = 0
+  if (np > 0) { while ((cmd | getline r) > 0) res[++nr] = r; close(cmd) }
+  for (j = 1; j <= np; j++) rp[pl[j]] = (nr == np) ? res[j] : pl[j]
+  for (j = 1; j <= nz; j++) zscore[rp[zpa[j]]] = zsa[j]
 
   i = 0
-  while ((getline line < tmuxfile) > 0) {
+  for (t = 1; t <= nt; t++) {
+    line = tl[t]
     n = split(line, p, "\t")
     if (n < 4 || p[1] == "") continue
     i++
@@ -93,7 +121,7 @@ BEGIN {
     # regression that only showed up once a session cwd was in the zoxide DB.
     spath = (n >= 5) ? p[5] : ""
     su = ""
-    if (spath != "" && (spath in zscore)) su = pyround(zscore[spath]) ""
+    if (spath != "" && (rp[spath] in zscore)) su = pyround(zscore[rp[spath]]) ""
     printf "%s\t%s\n", p[1], fmt(idx, ticon, p[1], rel(p[4]), created(p[3]), su, p[2] "w")
   }
   while ((getline line < zoxfile) > 0) {

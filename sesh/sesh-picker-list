@@ -44,11 +44,20 @@ ICON = {"tmux": "\ue795", "zoxide": "\uf07b", "config": "\ue615", "tmuxinator": 
 
 NAME_W = 50  # name column width (~2x the original 24)
 
+# Non-breaking space on either side of the name column. It renders exactly like
+# the space it replaces, but the picker's fzf --delimiter ('\t|\x{a0}') splits on
+# it, so --nth can scope the search to the name alone. Without that, typing a
+# name fuzzy-matched the index digits and metric columns (9s, 1w, Sep 27) too.
+# A TAB can't do this job: fzf expands it to the next tabstop, shifting columns.
+# The earlier `--with-nth=2 --nth=2` matched nothing at all: fzf evaluates --nth
+# against the --with-nth output, which was a single field, so field 2 was empty.
+SEP = "\u00a0"
+
 
 def fmt(idx, icon, name, used, crt, uses, win):
     """One row layout, shared by data rows and the header so columns always line
     up. idx = 1-based index shown for the first 9 rows (blank otherwise)."""
-    return (f"{idx:>2}  {icon}  {name[:NAME_W]:<{NAME_W}} "
+    return (f"{idx:>2}  {icon} {SEP}{name[:NAME_W]:<{NAME_W}}{SEP}"
             f"{used:>4}  {crt:>7}  {uses:>5}  {win:>4}")
 
 
@@ -112,7 +121,7 @@ if "--find" in FLAGS:
         p = line.rstrip("/")
         if not p or "/." in p[len(base):]:
             continue
-        sys.stdout.write(f"{p}\t{ICON['zoxide']}  {p}\n")
+        sys.stdout.write(f"{p}\t{ICON['zoxide']} {SEP}{p}\n")
     sys.exit(0)
 
 # --header-only: emit the two fzf header lines (column labels + key legend),

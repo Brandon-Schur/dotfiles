@@ -28,9 +28,13 @@ b=$("$ref" --icons | tail -n +3)     # drop the 2 inline header lines
 c=$("$fast" | tail -n +3)
 
 fail=0
-if [ -n "$a" ] && [ "$a" != "$b" ]; then
+# The original predates the NBSP name separators (SEP in sesh-picker-list), which
+# fzf's search scoping needs. Map them back to spaces for this leg only, so it still
+# checks row content and order; reference vs fast below stays byte-exact.
+b_plain=$(printf '%s\n' "$b" | sed $'s/\xc2\xa0/ /g')
+if [ -n "$a" ] && [ "$a" != "$b_plain" ]; then
   echo "PARITY BROKEN: reference (Python) vs original (sesh)"
-  diff <(printf '%s\n' "$a") <(printf '%s\n' "$b") | head -20
+  diff <(printf '%s\n' "$a") <(printf '%s\n' "$b_plain") | head -20
   fail=1
 fi
 if [ "$b" != "$c" ]; then
