@@ -1,0 +1,214 @@
+#!/usr/bin/env bash
+# Window rows for the sesh picker (sesh-popup). Right arrow on a tmux session row lists
+# that session's windows under it; Left hides them again. Left also opens and closes
+# every session at once:
+#   Left on a window row, or on a session opened with Right   close that session
+#   Left on a closed session or a directory row               open every session
+#   Left anywhere while every session is open                 close every session
+# So from a closed list, Left opens everything and a second Left closes it again. The
+# cost: while everything is open, Left cannot close just one session.
+#
+#   sesh-picker-tree key right|left IDENT FIELD2   fzf transform: prints fzf actions
+#   sesh-picker-tree list all|tmux                 a source list plus window rows
+#   sesh-picker-tree kill IDENT FIELD2             ctrl-d: kill a window or a session
+#
+# None of this runs when the picker opens. The first paint is still sesh-picker-fast
+# alone, so prefix+s costs what it did before; the list is rebuilt only on Right/Left.
+#
+# Window row ident:  @<window_id>:<k>:<session>,  k = the row's place under its
+# session (1 = first), which Left needs to put the cursor back on the session row.
+# Window ids rather than session:index because tmux 3.7b accepts ':' and '.' in
+# session names (`new-session -s b:x.y` keeps the name as typed), so "a:b:1" cannot be
+# split; @<id> is a complete tmux target by itself. The session name goes last for
+# the same reason: everything after the second ':' is the name, colons included.
+#
+# Session rows are recognised by the tmux icon in field 2 rather than by the ident,
+# since an ident alone cannot tell a session called "@1:2:x" from a window row.
+#
+# Per-window metadata comes from three tmux hooks in ~/.tmux.conf (no process forked):
+#   @win_created  set by after-new-window / after-new-session
+#   @win_used     set by session-window-changed on the window you enter AND the one
+#                 you leave, so it is the last time the window was current
+# Windows that predate the hooks fall back to the start time of their oldest pane's
+# process (/proc, Linux only) for created, and show no "used" until next visited.
+set -uo pipefail
+
+# U+E795 as UTF-8 bytes: the icon both list scripts put on tmux session rows. Bytes,
+# not $'', because bash 4.2 only encodes \u escapes in a UTF-8 locale.
+TMUX_ICON=$'\xee\x9e\x95'
+SELF="$HOME/.local/bin/sesh-picker-tree"
+LIST="$HOME/.local/bin/sesh-picker-list"
+FAST="$HOME/.local/bin/sesh-picker-fast"
+# Per-picker state, set by sesh-popup:
+#   expanded  session names whose windows are shown, one per line
+#   all       non-empty while every session is open (Left), whatever `expanded` says
+#   posmap    list position of the rows numbered 1-9, one per line, so a digit still
+#             jumps to the session labelled N after window rows push it down
+# sesh-popup's reload commands test `expanded` and `all` with [ -s ] too; keep in step.
+D="${SESH_TREE_DIR:-$HOME/.cache/sesh-picker/tree.manual}"
+
+is_tmux_row() { case "$1" in *"$TMUX_ICON"*) return 0 ;; esac; return 1; }
+
+all_open() { [ -s "$D/all" ]; }
+open_all() { mkdir -p "$D" && echo 1 > "$D/all"; }
+close_all() { : > "$D/all"; : > "$D/expanded"; }
+
+is_expanded() {
+  local line
+  all_open && return 0
+  [ -f "$D/expanded" ] || return 1
+  while IFS= read -r line; do [ "$line" = "$1" ] && return 0; done < "$D/expanded"
+  return 1
+}
+
+collapse() {
+  local line keep=""
+  [ -f "$D/expanded" ] || return 0
+  while IFS= read -r line; do [ "$line" = "$1" ] || keep+="$line"$'\n'; done < "$D/expanded"
+  printf '%s' "$keep" > "$D/expanded"
+}
+
+# Which source the picker is showing, from the prompt sesh-popup sets for it. Only
+# "all" (⚡) and "tmux" (🪟) contain session rows; the config, zoxide and find views
+# do not, and the keys leave them alone.
+view() { case "${FZF_PROMPT:-}" in ⚡*) v=all ;; 🪟*) v=tmux ;; *) v=none ;; esac; }  # sets $v, no subshell
+
+# Right/Left act on the tree only while the filter is empty, like the 1-9 jump; once
+# you are typing they move the cursor in the query as usual.
+key() {
+  local dir=$1 id=${2:-} f2=${3:-} v k="" sess=""
+  if [ -n "${FZF_QUERY:-}" ]; then
+    [ "$dir" = right ] && echo forward-char || echo backward-char
+    return
+  fi
+  view; [ "$v" = none ] && return 0
+  # A window row is never a session row; see the ident note at the top.
+  if ! is_tmux_row "$f2" && [[ $id =~ ^@[0-9]+:([0-9]+):(.*)$ ]]; then
+    k=${BASH_REMATCH[1]} sess=${BASH_REMATCH[2]}
+  fi
+  if [ "$dir" = right ]; then
+    is_tmux_row "$f2" || return 0
+    if is_expanded "$id"; then echo down; return; fi  # already open: step into it
+    mkdir -p "$D" && printf '%s\n' "$id" >> "$D/expanded"
+  elif all_open; then
+    close_all
+  elif is_tmux_row "$f2" && is_expanded "$id"; then
+    collapse "$id"
+  elif [ -n "$sess" ]; then
+    collapse "$sess"
+  else
+    open_all
+  fi
+  # track-current + --id-nth=1 keeps the cursor on this row across the reload. From a
+  # window row whose session is closing, the row disappears, so first park the cursor
+  # on its session row: k rows up, and nothing above it moves when the windows go.
+  local back=""
+  [ "$dir" = left ] && [ -n "$sess" ] && back="pos($(( ${FZF_POS:-1} - k )))+"
+  echo "${back}track-current+reload:$SELF list $v"
+}
+
+list() {
+  local -a base
+  if [ "${1:-all}" = tmux ]; then base=("$LIST" -t)
+  elif [ -x "$FAST" ]; then base=("$FAST")
+  else base=("$LIST" --icons)
+  fi
+  if [ ! -s "$D/expanded" ] && ! all_open; then
+    [ -e "$D/posmap" ] && : > "$D/posmap"
+    exec "${base[@]}"
+  fi
+  local all=0; all_open && all=1
+  # One tmux call for every window, run concurrently with the base list. Session
+  # fields are not needed beyond the name: the session row comes from the base list.
+  "${base[@]}" | awk -v now="$(date +%s)" -v sep=$'\xc2\xa0' -v ticon="$TMUX_ICON" \
+      -v expfile="$D/expanded" -v pmfile="$D/posmap" -v all="$all" \
+      -v winfile=<(tmux list-windows -a -F '#{session_name}	#{window_id}	#{window_index}	#{window_name}	#{window_active}	#{window_panes}	#{window_activity}	#{@win_created}	#{@win_used}	#{session_activity}	#{pane_current_command}	#{P:#{pane_pid} }' 2>/dev/null) '
+# Same column layout as sesh-picker-fast fmt(); window rows reuse it so they line up.
+function pad_left(s, w)  { return sprintf("%" w "s", s) }
+function pad_right(s, w) { return sprintf("%-" w "s", s) }
+function fmt(idx, icon, name, used, crt, uses, win) {
+  return pad_left(idx,2) "  " icon " " sep pad_right(substr(name,1,50),50) sep \
+         pad_left(used,4) "  " pad_left(crt,7) "  " pad_left(uses,5) "  " pad_left(win,4)
+}
+function rel(epoch,   d) {
+  if (epoch == "" || epoch+0 == 0) return ""
+  d = now - epoch; if (d < 0) d = 0; d = int(d)
+  if (d < 60)     return d "s"
+  if (d < 3600)   return int(d/60) "m"
+  if (d < 86400)  return int(d/3600) "h"
+  if (d < 604800) return int(d/86400) "d"
+  return int(d/604800) "w"
+}
+# HH:MM for a window created today, otherwise the date like the session rows.
+function wcreated(epoch) {
+  if (epoch == "" || epoch+0 == 0) return ""
+  return (strftime("%F", epoch) == strftime("%F", now)) ? strftime("%H:%M", epoch) : strftime("%b %d", epoch)
+}
+# Start time of a process from /proc/<pid>/stat, read with getline (no fork). Field 22
+# counted after the "(comm)" field, which may contain spaces. USER_HZ is 100 on Linux.
+function pstart(pid,   f, l, a) {
+  if (pid == "") return ""
+  f = "/proc/" pid "/stat"
+  if ((getline l < f) <= 0) { close(f); return "" }
+  close(f); sub(/^.*\) /, "", l); split(l, a, " ")
+  return int(btime + a[20] / 100)
+}
+function oldest(pids,   n, a, j, t, best) {
+  n = split(pids, a, " "); best = ""
+  for (j = 1; j <= n; j++) { t = pstart(a[j]); if (t != "" && (best == "" || t < best)) best = t }
+  return best
+}
+# f: 1 session  2 window_id  3 index  4 name  5 active  6 panes  7 activity
+#    8 @win_created  9 @win_used  10 session_activity  11 command  12 pane pids
+function winrow(sess, k, last,   f, nm, used, crt) {
+  split(W[sess, k], f, "\t")
+  nm = (last ? "└─ " : "├─ ") f[3] ": " f[4] (f[5] == "1" ? "*" : "")
+  if (f[11] != "" && f[11] != f[4]) nm = nm "  (" f[11] ")"
+  # The current window is in use for as long as you type in the session, so its
+  # "used" is the later of the hook stamp and the last keypress in the session.
+  used = f[9]
+  if (f[5] == "1" && f[10] + 0 > used + 0) used = f[10]
+  crt = (f[8] != "") ? f[8] : oldest(f[12])
+  printf "%s:%d:%s\t%s  out %s\n", f[2], k, sess, \
+    fmt("", " ", nm, rel(used), wcreated(crt), "", f[6] "p"), rel(f[7])
+}
+BEGIN {
+  while ((getline s < expfile) > 0) if (s != "") want[s] = 1
+  close(expfile)
+  getline up < "/proc/uptime"; close("/proc/uptime"); split(up, u, " "); btime = now - u[1]
+  while ((getline l < winfile) > 0) {
+    split(l, f, "\t")
+    if (all || (f[1] in want)) W[f[1], ++nw[f[1]]] = l
+  }
+  close(winfile)
+  printf "" > pmfile
+}
+NR <= 2 { print; next }   # the two pinned header lines
+{
+  print
+  # The base list numbers its first nine rows; record where each one ends up.
+  if (++base <= 9) print out + 1 > pmfile
+  out++
+  t = index($0, "\t"); ident = substr($0, 1, t - 1)
+  if ((all || (ident in want)) && index(substr($0, t + 1), ticon) && nw[ident] > 0) {
+    for (k = 1; k <= nw[ident]; k++) winrow(ident, k, k == nw[ident])
+    out += nw[ident]
+  }
+}'
+}
+
+kill_row() {
+  local id=${1:-} f2=${2:-}
+  if is_tmux_row "$f2"; then
+    tmux kill-session -t "=$id"
+  elif [[ $id =~ ^(@[0-9]+):[0-9]+: ]]; then
+    tmux kill-window -t "${BASH_REMATCH[1]}"
+  fi
+}
+
+case "${1:-}" in
+  key)  key "${2:-}" "${3:-}" "${4:-}" ;;
+  list) list "${2:-all}" ;;
+  kill) kill_row "${2:-}" "${3:-}" ;;
+  *)    echo "usage: sesh-picker-tree key right|left IDENT F2 | list all|tmux | kill IDENT F2" >&2; exit 2 ;;
+esac

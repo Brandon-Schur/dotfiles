@@ -32,7 +32,7 @@ fi
 
 echo "==> Linking the picker into $DST..."
 mkdir -p "$DST"
-for f in sesh-popup sesh-picker-list sesh-picker-fast check-picker-parity; do
+for f in sesh-popup sesh-picker-list sesh-picker-fast sesh-picker-tree check-picker-parity; do
   if [ -e "$DST/$f" ] && [ ! -L "$DST/$f" ]; then
     BACKUP="$DST/$f.backup.$(date +%Y%m%d-%H%M%S)"
     echo "  [•] Backing up existing $f to $BACKUP"

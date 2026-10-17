@@ -270,13 +270,44 @@ fights a tiling window manager.
 | Key | Action |
 |---|---|
 | `1`-`9` | Jump to that row and attach (empty filter only) |
+| `→` | Show the highlighted session's windows; press again to step into them |
+| `←` | Hide them. On a closed session or a directory row, show every session's windows; while all are shown, hide all |
 | `Tab` / `Shift-Tab` | Move down / up |
 | `ctrl-a` | All sources |
 | `ctrl-t` | tmux sessions only |
 | `ctrl-g` | sesh config entries |
 | `ctrl-x` | zoxide directories |
 | `ctrl-f` | Directory search under `$HOME` |
-| `ctrl-d` | Kill the highlighted session |
+| `ctrl-d` | Kill the highlighted session, or only the highlighted window on a window row |
+
+#### Window rows
+
+`→` on a session lists its windows under it; `→` again steps into them, `←` on the
+session or any of its windows hides them. `←` on a closed session or a directory row
+opens every session at once, and `←` anywhere while all are open closes them all, so
+two presses of `←` from a closed list open and close everything. (While everything is
+open, `←` cannot close a single session.) Both keys act on the tree only while the
+filter is empty; once you type, they move the cursor in the query. Enter on a window
+row attaches the session with that window current, and the preview shows that
+window's active pane.
+
+| Column | On a window row |
+|---|---|
+| `name` | index, name, `*` on the session's current window, and the running command |
+| `used` | last time the window was current; for the current window, the last keypress in the session |
+| `created` | `HH:MM` if created today, otherwise the date |
+| `win` | pane count |
+| `out` | last output from any pane (`window_activity`); TUIs that redraw, such as Claude Code, keep this near 0s |
+
+tmux records neither a window's creation time nor when it was last used, so three
+hooks in `tmux/.tmux.conf` stamp them as `@win_created` / `@win_used` window options,
+without forking a process. Windows created before the hooks fall back to the start
+time of their oldest pane's process (Linux `/proc` only) and show no `used` until
+they are next visited.
+
+Nothing changes when the picker opens: the first list is still `sesh-picker-fast`
+alone, and `sesh-picker-tree` only runs on `→` / `←`. While windows are expanded,
+`1`-`9` still jump to the session labelled with that digit.
 
 Install: `bash scripts/install-sesh.sh` (also run by `install.sh`). Needs
 [sesh](https://github.com/joshmedeski/sesh) and [fzf](https://github.com/junegunn/fzf);
@@ -292,6 +323,7 @@ column. The fast path uses `gawk`'s `strftime()`.
 | `sesh-popup` | the picker itself — fzf invocation and key bindings |
 | `sesh-picker-list` | reference implementation (Python); serves the flagged sources |
 | `sesh-picker-fast` | awk hot path, byte-identical output, ~15ms vs ~70ms |
+| `sesh-picker-tree` | `→`/`←` window rows, and ctrl-d for window rows; runs only on those keys |
 | `check-picker-parity` | asserts the two agree |
 
 awk starts in ~2ms against Python's ~21ms, which is most of the difference on a

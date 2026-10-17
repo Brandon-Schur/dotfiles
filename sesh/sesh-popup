@@ -37,6 +37,23 @@ LIST="$HOME/.local/bin/sesh-picker-list"
 FAST="$HOME/.local/bin/sesh-picker-fast"
 [ -x "$FAST" ] || FAST="$LIST --icons"
 
+# Right/Left expand and collapse a session's windows, and Left on a closed row opens
+# every session (see sesh-picker-tree for the rules). The state dir is only named
+# here, not created: it is made on the first Right or Left, so opening the picker
+# forks nothing extra, and it is removed on exit only if it exists.
+TREE="$HOME/.local/bin/sesh-picker-tree"
+export SESH_TREE_DIR="$HOME/.cache/sesh-picker/tree.$$"
+trap '[ -d "$SESH_TREE_DIR" ] && rm -rf "$SESH_TREE_DIR"' EXIT
+# Reload commands. Sources with session rows go through the tree script only while
+# something is expanded, so an unexpanded reload runs the same list as before.
+# Sources without session rows drop the digit position map; `>|` rather than `>` so
+# the truncate still works under zsh's noclobber. fzf runs these with $SHELL (zsh
+# here), so they stay POSIX, and `[ -s ]` / `:` are builtins.
+# Built with printf -v: a $(...) per string would fork six subshells on every open.
+printf -v reload_all  'if [ -s "%s/expanded" ] || [ -s "%s/all" ]; then %s list all; else %s; fi' "$SESH_TREE_DIR" "$SESH_TREE_DIR" "$TREE" "$FAST"
+printf -v reload_tmux 'if [ -s "%s/expanded" ] || [ -s "%s/all" ]; then %s list tmux; else %s -t; fi' "$SESH_TREE_DIR" "$SESH_TREE_DIR" "$TREE" "$LIST"
+printf -v drop_pos    '[ -e "%s/posmap" ] && : >| "%s/posmap";' "$SESH_TREE_DIR" "$SESH_TREE_DIR"
+
 # Always-on timing, so a slow press can be diagnosed after the fact instead of
 # reproduced. The stage that matters is keypress -> painted, NOT the total: the
 # total includes however long the picker sat open waiting for a keystroke, which
@@ -78,10 +95,13 @@ ts start
 # digit into the query. Uses fzf's COLON form (transform:CMD) -- the paren form
 # transform(...) miscounts the parentheses inside pos()/put() and fails to parse.
 # $FZF_QUERY is evaluated by fzf at keypress time, so it must reach fzf literally.
+# While windows are expanded, row N is no longer the session labelled N, so the jump
+# reads that session's position from the tree's posmap (line N). Builtins only: with
+# nothing expanded the `-s` test fails and this is the same single echo as before.
 digit_binds=()
 for n in 1 2 3 4 5 6 7 8 9; do
   digit_binds+=(--bind
-    "$n:transform:[ -z \"\$FZF_QUERY\" ] && echo \"pos($n)+accept\" || echo \"put($n)\"")
+    "$n:transform:if [ -n \"\$FZF_QUERY\" ]; then echo \"put($n)\"; exit 0; fi; p=$n; if [ -s \"$SESH_TREE_DIR/posmap\" ]; then i=0; while read -r q; do i=\$((i+1)); if [ \$i -eq $n ]; then p=\$q; break; fi; done < \"$SESH_TREE_DIR/posmap\"; fi; echo \"pos(\$p)+accept\"")
 done
 
 # Search scope. Rows are  ident TAB prefix NBSP name NBSP metrics  (see SEP in
@@ -92,29 +112,45 @@ done
 # Sorted with --tiebreak=index, not --no-sort: a query ranks name matches by score
 # and keeps list order (recency / frecency) among ties. An empty query is never
 # sorted, so the 1-9 jump still indexes the unfiltered order.
-selection=$(
+# --id-nth=1 makes the ident the row's identity, so Right/Left's track-current keeps
+# the cursor on the same row while the list reloads with windows added or removed.
+# ctrl-a/t keep whatever is expanded; ctrl-d now goes through the tree script, which
+# kills a window for a window row (kill-session -t on "@id" or "sess:idx" would take
+# the whole session with it) and reloads with $FAST, byte-identical to $LIST --icons.
+# Preview: window rows (ident @<id>:<k>:<session>) capture that window's active pane.
+line=$(
   { ts list_begin; $FAST; ts list_end; } | fzf \
     --header-lines=2 \
     --layout=reverse --ansi --tiebreak=index \
-    --delimiter='\t|\x{a0}' --with-nth=2.. --nth=2 \
+    --delimiter='\t|\x{a0}' --with-nth=2.. --nth=2 --id-nth=1 \
     --border --border-label ' sesh ' --prompt '⚡  ' \
     --bind 'tab:down,btab:up' \
     ${timing_binds[@]+"${timing_binds[@]}"} \
     "${digit_binds[@]}" \
-    --bind "ctrl-a:change-prompt(⚡  )+reload($FAST)" \
-    --bind "ctrl-t:change-prompt(🪟  )+reload($LIST -t)" \
-    --bind "ctrl-g:change-prompt(⚙️  )+reload($LIST -c)" \
-    --bind "ctrl-x:change-prompt(📁  )+reload($LIST -z)" \
-    --bind "ctrl-f:change-prompt(🔎  )+reload($LIST --find)" \
-    --bind "ctrl-d:execute(tmux kill-session -t {1})+change-prompt(⚡  )+reload($LIST --icons)" \
+    --bind "right:transform:$TREE key right {1} {2}" \
+    --bind "left:transform:$TREE key left {1} {2}" \
+    --bind "ctrl-a:change-prompt(⚡  )+reload($reload_all)" \
+    --bind "ctrl-t:change-prompt(🪟  )+reload($reload_tmux)" \
+    --bind "ctrl-g:change-prompt(⚙️  )+reload($drop_pos $LIST -c)" \
+    --bind "ctrl-x:change-prompt(📁  )+reload($drop_pos $LIST -z)" \
+    --bind "ctrl-f:change-prompt(🔎  )+reload($drop_pos $LIST --find)" \
+    --bind "ctrl-d:execute($TREE kill {1} {2})+change-prompt(⚡  )+reload($reload_all)" \
     --preview-window 'right:45%' \
-    --preview "sesh preview {1}" \
-  | cut -f1
+    --preview 'i={1}; case "$i" in @[0-9]*:[0-9]*:*) tmux capture-pane -ep -t "${i%%:*}" ;; *) sesh preview "$i" ;; esac'
 )
+# The ident is field 1. Split it off here instead of piping fzf through `cut -f1`,
+# which was one more process between Enter and the switch.
+selection=${line%%$'\t'*}
 
 ts fzf_exit
 if [ -n "$selection" ]; then
-  sesh connect "$selection"
+  # Window row: make that window current in its session, then attach the session.
+  # A session row carries the tmux icon; a window row never does.
+  if [[ $selection =~ ^(@[0-9]+):[0-9]+:(.+)$ ]] && [[ $line != *$'\xee\x9e\x95'* ]]; then
+    tmux select-window -t "${BASH_REMATCH[1]}" && sesh connect "${BASH_REMATCH[2]}"
+  else
+    sesh connect "$selection"
+  fi
   ts connected
 fi
 exit 0  # cancelling the picker (empty selection) is not an error
