@@ -591,6 +591,44 @@ async function renderPlaylists() {
   }
 }
 
+
+// --- AeroSpace: undo workspace jumps caused by apps activating themselves (e.g. Spotify on play) ---
+const AEROSPACE = ["/opt/homebrew/bin/aerospace", "/usr/local/bin/aerospace"].find((f) => fs.existsSync(f));
+
+async function aerospaceSnapshot() {
+  if (!AEROSPACE) return null;
+  const vis = await run(AEROSPACE, ["list-workspaces", "--monitor", "all", "--visible", "--format", "%{monitor-id}\t%{workspace}"]);
+  const foc = await run(AEROSPACE, ["list-workspaces", "--focused"]);
+  if (vis.code !== 0 || foc.code !== 0) return null;
+  const visible = {};
+  for (const line of vis.stdout.trim().split("\n")) {
+    const [mon, ws] = line.split("\t");
+    if (mon && ws) visible[mon] = ws;
+  }
+  return { visible, focused: foc.stdout.trim() };
+}
+
+/** Wait up to `ms` for the visible workspaces to change, then switch them back in one layout pass. */
+async function aerospaceRestore(before, ms = 2500) {
+  if (!before) return;
+  const deadline = Date.now() + ms;
+  let after;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 250));
+    after = await aerospaceSnapshot();
+    if (after && (after.focused !== before.focused || JSON.stringify(after.visible) !== JSON.stringify(before.visible))) break;
+    after = null;
+  }
+  if (!after) return; // nothing moved
+  const cmds = Object.entries(before.visible)
+    .filter(([mon, ws]) => after.visible[mon] !== ws)
+    .map(([, ws]) => `workspace ${ws}`);
+  cmds.push(`workspace ${before.focused}`); // last, so focus ends where it was
+  const valid = (c) => /^workspace [\w-]+$/.test(c);
+  const r = await run(AEROSPACE, ["eval", cmds.filter(valid).join("; ")]);
+  if (r.code !== 0) log("aerospace restore failed", cmds, r.stderr.trim());
+}
+
 const PLAYLIST_PAGE = 2; // third page of the bundled "Zoom Call" profile
 
 async function pressPlaylist(settings, context, device) {
@@ -599,6 +637,7 @@ async function pressPlaylist(settings, context, device) {
   const uri = /^spotify:user:\d+:collection$/.test(settings.uri || "") ? settings.uri
     : /^[A-Za-z0-9]{22}$/.test(id) ? `spotify:playlist:${id}` : "";
   if (!uri) return send({ event: "showAlert", context });
+  const before = await aerospaceSnapshot();
   const r = await osa(`
 if application "Spotify" is not running then
   tell application "Spotify" to launch
@@ -611,6 +650,7 @@ tell application "Spotify" to play track "${uri}"`);
   } else {
     send({ event: "showOk", context });
     if (onCall.has(device) && !inMeeting) switchProfile(device); // back to the home page
+    aerospaceRestore(before);
     setTimeout(() => refreshSpotify(true), 1500);
   }
 }

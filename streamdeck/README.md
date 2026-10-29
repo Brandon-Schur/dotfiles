@@ -40,7 +40,7 @@ home page; during a meeting, Back returns to the call page instead.
 | Slack DnD 🍅 | **On:** turns focus mode off, picks the recent status "🍅 Focus", ticks "Pause notifications until status is cleared" (VIPs still get through), saves. **Off:** clears the status and resumes notifications. State is read from Slack every 5 s. |
 | Album art | The current Spotify cover split across a 2×2 block, with track and artist. Pressing opens Spotify. |
 | ⏮ ⏯ ⏭ 🔀 | Elgato's Spotify plugin. |
-| Playlists | Plays via AppleScript `play track "spotify:playlist:<id>"` (Liked Songs: `spotify:user:<user id>:collection`). Covers come from Spotify's public oEmbed endpoint; no login. |
+| Playlists | Plays via AppleScript `play track "spotify:playlist:<id>"` (Liked Songs: `spotify:user:<user id>:collection`). Covers come from Spotify's public oEmbed endpoint; no login. Spotify grabs focus when it starts playing, which makes [AeroSpace](https://github.com/nikitabobko/AeroSpace) jump a monitor to Spotify's workspace; the plugin snapshots each monitor's visible workspace before playing and switches them back afterwards (one `aerospace eval` call). |
 | Zoom call keys | Mute, Video, Share, Leave, Record, Raise Hand and 👍👏❤️😂🎉😮 use Elgato's Zoom plugin. |
 | Extra reactions | 🔥 👀 🙌 💯 and custom emoji drive Zoom's **React → More reactions** picker: search by shortcode, click the result (~1–2 s). |
 | Chat / Participants | Zoom's **View → Show/Hide** menu items. |
