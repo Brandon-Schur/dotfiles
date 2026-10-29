@@ -3,7 +3,7 @@
 Personal terminal and editor configuration — **tmux** + **Neovim** (AstroNvim) — plus
 macOS audio routing.
 
-**Theme:** Custom colorscheme across tmux, Neovim, and Alacritty.
+**Theme:** Custom colorscheme across tmux, Neovim, Alacritty, and Obsidian.
 
 ---
 
@@ -14,6 +14,7 @@ macOS audio routing.
 | **tmux** | Custom colorscheme over catppuccin v2 status layout |
 | **sesh picker** | fzf session picker on `prefix s` — sessions ordered by last use, with a metrics table |
 | **Neovim** | AstroNvim v5 with custom colorscheme, git tools, LSP, and formatters |
+| **Obsidian** | `obsidian/bschur_custom.css` — CSS snippet that applies the custom palette over the Minimal theme. Copy to `<vault>/.obsidian/snippets/` and enable under Settings → Appearance → CSS snippets |
 | **audio-priority** (macOS) | Picks the default speaker/mic by priority as devices come and go, and feeds Loopback's Meeting Capture (all system audio + current mic) for a transcription app. Installed separately; see [`audio-priority/README.md`](audio-priority/README.md) |
 | **streamdeck** (macOS) | Custom Stream Deck plugin: notification badges, Spotify art and playlist picker, Slack DnD, and Zoom call controls that switch in automatically during meetings. See [`streamdeck/README.md`](streamdeck/README.md) |
 

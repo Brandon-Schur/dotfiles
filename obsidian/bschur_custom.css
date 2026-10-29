@@ -1,0 +1,95 @@
+/* ==========================================================================
+   bschur_custom color scheme for the Minimal theme
+   Source of truth: ~/dotfiles — the "bschur_custom" palette shared by
+   nvim (lua/plugins/tokyonight.lua), alacritty (bschur_custom.toml) and tmux.
+
+   Minimal's scheme dropdown is hardcoded, so this snippet overrides whichever
+   Minimal scheme is selected. Enable/disable it under
+   Settings → Appearance → CSS snippets → "bschur_custom".
+
+   Variables follow Minimal's scheme format:
+   https://minimal.guide/features/color-schemes
+   Doubled .theme-* class raises specificity above Minimal's built-in
+   scheme selectors (e.g. .theme-dark.minimal-nord-dark.minimal-dark-black).
+   ========================================================================== */
+
+/* ── Extended colors (dark) ─────────────────────────────────────────────── */
+body.minimal-theme.theme-dark.theme-dark {
+  --color-red-rgb: 247,106,134;
+  --color-orange-rgb: 240,163,94;
+  --color-yellow-rgb: 252,207,84;
+  --color-green-rgb: 52,211,153;
+  --color-cyan-rgb: 41,181,232;
+  --color-blue-rgb: 89,153,248;
+  --color-purple-rgb: 180,142,240;
+  --color-pink-rgb: 224,85,154;
+  --color-red: #f76a86;
+  --color-orange: #f0a35e;
+  --color-yellow: #fccf54;
+  --color-green: #34d399;
+  --color-cyan: #29b5e8;     /* brand cyan */
+  --color-blue: #5999f8;
+  --color-purple: #b48ef0;
+  --color-pink: #e0559a;
+
+  /* Base: cool near-black (#1e252f) */
+  --base-h: 215;
+  --base-s: 22%;
+  --base-l: 15%;
+  /* Accent: readable royal blue (#5999f8) */
+  --accent-h: 216;
+  --accent-s: 92%;
+  --accent-l: 66%;
+
+  --bg1: #1e252f;            /* editor */
+  --bg2: #191e24;            /* sidebars, popovers */
+  --bg3: rgba(89,153,248,0.15);
+  --ui1: #374151;            /* borders */
+  --ui2: #5d6a85;            /* hover borders */
+  --ui3: #70819a;
+  --tx1: #dee3ea;            /* normal text */
+  --tx2: #8a96ad;            /* muted */
+  --tx3: #5d6a85;            /* faint */
+  --hl1: rgba(26,108,231,0.4);   /* selection (royal blue) */
+  --hl2: rgba(252,207,84,0.3);   /* ==highlight== (amber) */
+}
+
+/* ── Light variant (the "day" values from tokyonight.lua) ───────────────── */
+body.minimal-theme.theme-light.theme-light {
+  --color-red-rgb: 211,19,47;
+  --color-orange-rgb: 201,119,46;
+  --color-yellow-rgb: 236,183,0;
+  --color-green-rgb: 4,120,87;
+  --color-cyan-rgb: 36,158,220;
+  --color-blue-rgb: 26,108,231;
+  --color-purple-rgb: 113,96,192;
+  --color-pink-rgb: 196,48,122;
+  --color-red: #d3132f;
+  --color-orange: #c9772e;
+  --color-yellow: #ecb700;
+  --color-green: #047857;
+  --color-cyan: #249edc;
+  --color-blue: #1a6ce7;
+  --color-purple: #7160c0;
+  --color-pink: #c4307a;
+
+  --base-h: 216;
+  --base-s: 20%;
+  --base-l: 97%;
+  /* Accent: docs royal blue (#1a6ce7) */
+  --accent-h: 216;
+  --accent-s: 81%;
+  --accent-l: 50%;
+
+  --bg1: #ffffff;
+  --bg2: #f7f7f7;
+  --bg3: rgba(26,108,231,0.1);
+  --ui1: #dde3ec;
+  --ui2: #c3ccd9;
+  --ui3: #8a96ad;
+  --tx1: #2c2f34;
+  --tx2: #5d6a85;
+  --tx3: #8a96ad;
+  --hl1: rgba(26,108,231,0.2);
+  --hl2: rgba(236,183,0,0.3);
+}
