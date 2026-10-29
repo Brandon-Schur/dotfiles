@@ -2,8 +2,8 @@
 WINDOW_MANAGER = "aerospace"
 --- @type "gnix" | "compact"
 PRESET = "gnix"
---- @type "catppuccin_mocha" | "catppuccin_latte" | "rose_pine" | "tokyo_night" | "nord_light" | "snowflake"
-THEME = "snowflake"
+--- @type "catppuccin_mocha" | "catppuccin_latte" | "rose_pine" | "tokyo_night" | "nord_light" | "bschur_custom"
+THEME = "bschur_custom"
 
 SBAR_HOME = (os.getenv("HOME") or "~") .. "/.config/sketchybar/"
 ITEMS_HOME = SBAR_HOME .. "items/"
