@@ -5,7 +5,7 @@
 # so the title-based on-window-detected rule usually misses it and the window
 # falls through to the "park on 9" rule. This script (run via exec-and-forget
 # from that rule) polls the title for a few seconds; if it turns into a
-# meeting window it goes to workspace $MEETING_WS (4) tiled side-by-side (h_tiles) as the
+# meeting window it goes to workspace $MEETING_WS (profile "meeting" role, see workspaces.sh) tiled side-by-side (h_tiles) as the
 # LEFT window at MEETING_WIDTH_PCT of the monitor width, then workspace 9 is
 # re-gridded.
 #
@@ -14,8 +14,10 @@
 
 AEROSPACE=/opt/homebrew/bin/aerospace
 DIR="$(cd "$(dirname "$0")" && pwd)"
-MEETING_WS=4
-PARK_WS=9
+# Meeting/parking workspaces depend on the profile (laptop vs desk).
+source "$DIR/workspaces.sh"
+MEETING_WS=$(ws_for meeting)
+PARK_WS=$(ws_for park)
 MEETING_RE='Zoom Meeting'
 # Default width of the meeting window, as a % of its monitor's width.
 # 28% ≈ 860pt on a 3072pt-wide monitor. The other windows get the rest.

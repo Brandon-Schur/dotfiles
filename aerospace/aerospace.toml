@@ -17,6 +17,9 @@
 #   zoom-route.sh               route Zoom meeting windows once titled
 #   relayout-all.sh             re-apply frames on visible workspaces
 #   first-window-to-workspace.sh  send only an app's first window to a workspace
+#   workspaces.sh               laptop/desk app -> workspace tables (edit here)
+#   route.sh                    send a new window to its role's workspace
+#   apply-profile.sh            re-sort open windows on dock/undock (alt-shift-p)
 #
 # Notes:
 #   - Callbacks run with a minimal PATH, so binaries use absolute paths.
@@ -76,15 +79,16 @@ on-focus-changed = [
     'exec-and-forget /bin/bash ~/.config/aerospace/grid-workspace.sh 9 --if-changed',
 ]
 
-# Binding-mode change: notify SketchyBar (mode indicator).
-on-mode-changed = ['exec-and-forget /opt/homebrew/bin/sketchybar --trigger aerospace_mode_change MODE=$AEROSPACE_MODE']
-
 # =============================================================================
 # 4. Workspaces & monitors
 # =============================================================================
 
 persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
 
+# App placement differs on laptop-only vs the 3-display desk; see the tables
+# in workspaces.sh. Workspaces assigned to a missing monitor fall back to the
+# built-in display, so this table only needs the desk layout.
+#
 # Monitor ids (aerospace list-monitors), home setup:
 #   1 | Built-in Retina Display
 #   2 | Odyssey G7
@@ -200,6 +204,9 @@ alt-shift-m = 'exec-and-forget /bin/bash -c "/bin/bash ~/.config/aerospace/smart
 alt-shift-g = 'exec-and-forget /bin/bash ~/.config/aerospace/grid-workspace.sh 9'
 # Re-apply window frames on all visible workspaces (fixes windows stretched across monitors)
 alt-shift-r = 'exec-and-forget /bin/bash ~/.config/aerospace/relayout-all.sh'
+# Re-sort open windows into the laptop/desk workspace profile (workspaces.sh).
+# Runs automatically on display changes via SketchyBar; this forces it.
+alt-shift-p = 'exec-and-forget /bin/bash ~/.config/aerospace/apply-profile.sh'
 
 # --- Workspaces: switch (ctrl + 1-9) -----------------------------------------
 
@@ -286,13 +293,12 @@ run = 'layout floating'
 # side (h_tiles) as the LEFT window at MEETING_WIDTH_PCT of the monitor.
 # Zoom usually sets the "Zoom Meeting" title AFTER the window appears, so the
 # title rule often misses; zoom-route.sh (called by both rules) polls the title
-# and routes the window to its MEETING_WS (4). If you change the meeting
-# workspace, change it in both places.
+# and moves the window to the profile's "meeting" workspace (workspaces.sh).
 
 [[on-window-detected]]
 if.app-id = 'us.zoom.xos'
 if.window-title-regex-substring = 'Zoom Meeting'
-run = ['move-node-to-workspace 4', 'layout tiling', 'layout h_tiles', 'exec-and-forget /bin/bash ~/.config/aerospace/zoom-route.sh']
+run = ['layout tiling', 'layout h_tiles', 'exec-and-forget /bin/bash ~/.config/aerospace/zoom-route.sh']
 
 # Any other Zoom window (e.g. "Zoom Workplace") -> parked on 9 (see d).
 [[on-window-detected]]
@@ -336,39 +342,36 @@ if.app-name-regex-substring = 'Wisp'
 run = ['move-node-to-workspace 9', 'layout tiling', 'exec-and-forget /bin/bash ~/.config/aerospace/grid-workspace.sh 9']
 
 # --- e. App -> home workspace ------------------------------------------------
-# Every new window of these apps opens on its home workspace.
+# Every new window of these apps opens on its home workspace. The number
+# depends on the profile (laptop vs desk): see the table in workspaces.sh.
 # app-id is an EXACT match, so the Vivaldi "Dashboard" web app (its own id)
 # isn't caught by the plain Vivaldi rule.
 
-# 1: Slack
 [[on-window-detected]]
 if.app-id = 'com.tinyspeck.slackmacgap'
-run = 'move-node-to-workspace 1'
+run = 'exec-and-forget /bin/bash ~/.config/aerospace/route.sh slack'
 
-# 2: Vivaldi (main browser)
 [[on-window-detected]]
 if.app-id = 'com.vivaldi.Vivaldi'
-run = 'move-node-to-workspace 2'
+run = 'exec-and-forget /bin/bash ~/.config/aerospace/route.sh vivaldi'
 
-# 3: Alacritty. Only the FIRST terminal goes to 3; extra terminals
-# (alt-shift-enter) stay on the workspace they were opened from.
+# Only the FIRST terminal goes home; extra terminals (alt-shift-enter) stay on
+# the workspace they were opened from.
 [[on-window-detected]]
 if.app-id = 'org.alacritty'
-run = 'exec-and-forget /bin/bash ~/.config/aerospace/first-window-to-workspace.sh org.alacritty 3'
-
-# 5: Outlook + Vivaldi "Dashboard" web app
-[[on-window-detected]]
-if.app-id = 'com.microsoft.Outlook'
-run = 'move-node-to-workspace 5'
+run = 'exec-and-forget /bin/bash ~/.config/aerospace/first-window-to-workspace.sh org.alacritty alacritty'
 
 [[on-window-detected]]
 if.app-id = 'com.vivaldi.Vivaldi.app.mcijphhnflbofdapglafogoladjmgfge'
-run = 'move-node-to-workspace 5'
+run = 'exec-and-forget /bin/bash ~/.config/aerospace/route.sh dashboard'
 
-# 7: Spotify
+[[on-window-detected]]
+if.app-id = 'com.microsoft.Outlook'
+run = 'exec-and-forget /bin/bash ~/.config/aerospace/route.sh outlook'
+
 [[on-window-detected]]
 if.app-id = 'com.spotify.client'
-run = 'move-node-to-workspace 7'
+run = 'exec-and-forget /bin/bash ~/.config/aerospace/route.sh spotify'
 
 # Obsidian: intentionally NOT mapped (moved by hand). To pin it, uncomment:
 # [[on-window-detected]]
