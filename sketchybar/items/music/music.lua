@@ -15,6 +15,15 @@ local POPUP_HEIGHT = 120
 local IMAGE_SCALE = 0.15
 local Y_OFFSET = -5
 
+-- Fixed width (px) of the text column to the right of the cover art. The
+-- title/artist/album items have width 0, so the popup only gets as wide as the
+-- controls row; the spacer below pads it out to this width so text fits.
+local TEXT_COLUMN_WIDTH = 240
+local CONTROLS_WIDTH = 110 -- back (35) + play (40) + next (35)
+-- Approx px per char for JetBrainsMono at the sizes used below
+local TITLE_MAX_CHARS = math.floor(TEXT_COLUMN_WIDTH / 12.5)
+local SUBTITLE_MAX_CHARS = math.floor(TEXT_COLUMN_WIDTH / 9.5)
+
 --- @type number the delay between `media control` command and `info fetch` command; This should be adjusted based on system performance.
 -- After sending a next_track command, the track info might not update immediately.
 -- That is to say, running `media-control get` right after `media-control next-track` may still return the old track info.
@@ -38,6 +47,9 @@ local music_anchor = SBAR.add("item", "music.anchor", {
   popup = {
     horizontal = true,
     height = POPUP_HEIGHT,
+    -- Pin the popup's right edge to the anchor's right edge so it doesn't
+    -- re-center (and slide) whenever the bar label changes width.
+    align = "right",
   },
 })
 
@@ -63,7 +75,7 @@ local track_title = SBAR.add("item", "music.title", {
   width = 0,
   label = {
     font = { size = 20.0 },
-    max_chars = MUSIC.TITLE_MAX_CHARS,
+    max_chars = TITLE_MAX_CHARS,
     color = COLORS.mauve,
     shadow = {
       drawing = false,
@@ -82,7 +94,7 @@ local track_artist = SBAR.add("item", "music.artist", {
   align = "center",
   label = {
     font = { size = 15.0 },
-    max_chars = 20,
+    max_chars = SUBTITLE_MAX_CHARS,
     color = COLORS.blue,
   },
 })
@@ -96,7 +108,7 @@ local track_album = SBAR.add("item", "music.album", {
   width = 0,
   label = {
     font = { size = 15.0 },
-    max_chars = 20,
+    max_chars = SUBTITLE_MAX_CHARS,
     color = COLORS.lavender,
   },
 })
@@ -152,7 +164,8 @@ local next_btn = SBAR.add("item", "music.next", {
 
 SBAR.add("item", "music.spacer", {
   position = popup_position,
-  width = 5,
+  -- Pads the popup so the (width = 0) text column fits inside it, + 10px margin
+  width = TEXT_COLUMN_WIDTH - CONTROLS_WIDTH + 10,
 })
 
 SBAR.add("bracket", "music.controls", {

@@ -30,6 +30,10 @@ local icons = {
     _10 = "􀊡",
     _0 = "􀊣",
   },
+  mic = {
+    on = "􀊱", -- mic.fill
+    off = "􀊳", -- mic.slash.fill
+  },
   battery = {
     _100 = "􀛨",
     _75 = "􀺸",

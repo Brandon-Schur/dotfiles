@@ -47,6 +47,7 @@ MODULES = {
   battery = { enable = true, style = "icon" },
   wifi = { enable = true },
   volume = { enable = true },
+  mic = { enable = true },
   chat = { enable = true },
   brew = { enable = true },
   toggle_stats = { enable = true },

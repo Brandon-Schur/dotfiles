@@ -36,6 +36,9 @@ end
 if is_enabled("volume") then
   safe_require("items.volume.volume")
 end
+if is_enabled("mic") then
+  safe_require("items.volume.mic")
+end
 if is_enabled("chat") then
   safe_require("items.chat.qq_wechat")
 end

@@ -136,6 +136,19 @@ stats_watchdog:subscribe({ "forced", "routine", "system_woke" }, function()
   end
 end)
 
+-- AeroSpace laptop/desk workspace profile: when displays are added/removed,
+-- re-sort open windows into the profile's workspaces (see
+-- ~/.config/aerospace/workspaces.sh). AeroSpace has no monitor-change callback.
+-- --if-changed debounces and skips when the profile didn't actually change.
+local aerospace_profile = SBAR.add("item", "aerospace.profile_watcher", {
+  drawing = false,
+  updates = "on",
+})
+
+aerospace_profile:subscribe("display_change", function()
+  SBAR.exec("/bin/bash $HOME/.config/aerospace/apply-profile.sh --if-changed >/dev/null 2>&1 &")
+end)
+
 require("items")
 
 SBAR.end_config()
