@@ -1,0 +1,219 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+  "UUID": "com.bschur.zoomcall",
+  "Name": "Zoom Call Deck",
+  "Version": "1.1.0.0",
+  "Author": "bschur",
+  "Description": "Auto-switches to a Zoom Call profile during meetings; adds any-emoji reactions and chat/participants toggles.",
+  "Category": "Zoom Call Deck",
+  "CategoryIcon": "imgs/category",
+  "Icon": "imgs/plugin",
+  "CodePath": "bin/plugin.js",
+  "SDKVersion": 2,
+  "Software": {
+    "MinimumVersion": "6.6"
+  },
+  "OS": [
+    {
+      "Platform": "mac",
+      "MinimumVersion": "12"
+    }
+  ],
+  "Nodejs": {
+    "Version": "20",
+    "Debug": "disabled"
+  },
+  "Profiles": [
+    {
+      "Name": "Zoom Call",
+      "DeviceType": 0,
+      "Readonly": false,
+      "DontAutoSwitchWhenInstalled": true,
+      "AutoInstall": true
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "com.bschur.zoomcall.react",
+      "Name": "Any Reaction",
+      "Tooltip": "Send any emoji reaction through Zoom's emoji picker",
+      "Icon": "imgs/action-react",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/key-react"
+        }
+      ]
+    },
+    {
+      "UUID": "com.bschur.zoomcall.panel",
+      "Name": "Chat / Participants",
+      "Tooltip": "Toggle the Zoom chat or participants panel",
+      "Icon": "imgs/action-panel",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/key-chat"
+        }
+      ]
+    },
+    {
+      "UUID": "com.bschur.zoomcall.page",
+      "Name": "Zoom Call Page",
+      "Tooltip": "Jump to a page of the Zoom Call profile",
+      "Icon": "imgs/action-page",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/key-more"
+        }
+      ]
+    },
+    {
+      "UUID": "com.bschur.zoomcall.open",
+      "Name": "Open Zoom Call Deck",
+      "Tooltip": "Switch to the Zoom Call profile now",
+      "Icon": "imgs/action-open",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/key-open"
+        }
+      ]
+    },
+    {
+      "UUID": "com.bschur.zoomcall.badge",
+      "Name": "Unread Badge",
+      "Tooltip": "Slack/Outlook unread count (settings: app, mode)",
+      "Icon": "imgs/action-open",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/key-open"
+        }
+      ]
+    },
+    {
+      "UUID": "com.bschur.zoomcall.nextmeeting",
+      "Name": "Next Meeting",
+      "Tooltip": "Countdown to the next Zoom meeting; press to join",
+      "Icon": "imgs/action-open",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/key-open"
+        }
+      ]
+    },
+    {
+      "UUID": "com.bschur.zoomcall.nowplaying",
+      "Name": "Now Playing Art",
+      "Tooltip": "One quarter of the Spotify album art (settings: quadrant 0-3)",
+      "Icon": "imgs/action-open",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/key-open"
+        }
+      ]
+    },
+    {
+      "UUID": "com.bschur.zoomcall.spotify",
+      "Name": "Spotify Volume",
+      "Tooltip": "Spotify volume up/down (settings: cmd volup|voldown)",
+      "Icon": "imgs/action-open",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/key-open"
+        }
+      ]
+    },
+    {
+      "UUID": "com.bschur.zoomcall.home",
+      "Name": "Home",
+      "Tooltip": "Leave the Zoom Call page and go back to the home page",
+      "Icon": "imgs/action-open",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/key-open"
+        }
+      ]
+    },
+    {
+      "UUID": "com.bschur.zoomcall.dnd",
+      "Name": "Slack Focus Mode",
+      "Tooltip": "Toggle Slack focus mode (Slack's own button)",
+      "Icon": "imgs/action-open",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/key-open"
+        }
+      ]
+    },
+    {
+      "UUID": "com.bschur.zoomcall.slackdnd",
+      "Name": "Slack Do Not Disturb",
+      "Tooltip": "Set status 🍅 Focus and pause notifications until cleared (VIPs still notify); press again to clear",
+      "Icon": "imgs/action-open",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/key-open"
+        }
+      ]
+    },
+    {
+      "UUID": "com.bschur.zoomcall.playlist",
+      "Name": "Spotify Playlist",
+      "Tooltip": "Play a Spotify playlist (settings: id, name)",
+      "Icon": "imgs/action-open",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/key-open"
+        }
+      ]
+    },
+    {
+      "UUID": "com.bschur.zoomcall.playlists",
+      "Name": "Open Playlists",
+      "Tooltip": "Show the playlist picker",
+      "Icon": "imgs/action-open",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/key-open"
+        }
+      ]
+    }
+  ]
+}

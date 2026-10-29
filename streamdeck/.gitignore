@@ -1,0 +1,10 @@
+# Build output (./build.sh)
+build/
+com.bschur.zoomcall.sdPlugin/bin/zoomctl
+com.bschur.zoomcall.sdPlugin/bin/deckart
+com.bschur.zoomcall.sdPlugin/node_modules/
+com.bschur.zoomcall.sdPlugin/Zoom Call.streamDeckProfile
+# Runtime state (logs, cached album art / covers, badge baselines)
+com.bschur.zoomcall.sdPlugin/logs/
+# Local profile backups
+backup/

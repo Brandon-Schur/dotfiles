@@ -1,0 +1,8 @@
+{
+  "name": "com.bschur.zoomcall",
+  "private": true,
+  "description": "Runtime deps for the Zoom Call Deck Stream Deck plugin",
+  "dependencies": {
+    "ws": "8.18.0"
+  }
+}
