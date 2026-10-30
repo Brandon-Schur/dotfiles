@@ -214,6 +214,48 @@
           "Image": "imgs/key-open"
         }
       ]
+    },
+    {
+      "UUID": "com.bschur.zoomcall.songs",
+      "Name": "Song Picker",
+      "Tooltip": "Pick a song from the playlist that's playing",
+      "Icon": "imgs/action-open",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/key-open"
+        }
+      ]
+    },
+    {
+      "UUID": "com.bschur.zoomcall.song",
+      "Name": "Song",
+      "Tooltip": "A song slot in the song picker",
+      "Icon": "imgs/action-open",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/key-open"
+        }
+      ]
+    },
+    {
+      "UUID": "com.bschur.zoomcall.songpage",
+      "Name": "Song Page",
+      "Tooltip": "Previous/next page of songs (settings: delta)",
+      "Icon": "imgs/action-open",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/key-open"
+        }
+      ]
     }
   ]
 }

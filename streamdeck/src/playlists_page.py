@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Installs the playlist picker as page 3 of the "Zoom Call" profile (run only while Stream Deck is quit).
+"""Installs the playlist picker (page index 2) and song picker (page index 3) of the "Zoom Call" profile (run only while Stream Deck is quit).
 
 Plugins can leave pages of their own bundled profile (back to the home page), but they can't close a
 built-in folder. So the picker lives in the plugin's profile:
@@ -73,3 +73,34 @@ icon(f"{hdir}/Images", "k-playlists\t144\t🎵\tPlaylists\t#2d3a46\n")
 acts["3,2"] = act("com.bschur.zoomcall.playlists", "Playlists", image="Images/k-playlists.png")
 json.dump(hm, open(f"{hdir}/manifest.json", "w"))
 print("home 3,2 -> Open Playlists")
+
+# --- song picker: page index 3 of the Zoom Call profile + home 4,2 key ---
+top = json.load(open(f"{zc}/manifest.json"))
+pages = top["Pages"]["Pages"]
+if len(pages) >= 4:
+    sid = pages[3].upper()
+    shutil.rmtree(f"{zc}/Profiles/{sid}", ignore_errors=True)
+else:
+    sid = str(uuid.uuid4()).upper()
+    pages.append(sid.lower())
+    json.dump(top, open(f"{zc}/manifest.json", "w"))
+sdir = f"{zc}/Profiles/{sid}"
+os.makedirs(f"{sdir}/Images")
+icon(f"{sdir}/Images", "k-back\t144\t◀\tBack\t\n")
+spage = {"0,0": act("com.bschur.zoomcall.home", "Back", {"toCall": True}, image="Images/k-back.png"),
+         "3,2": act("com.bschur.zoomcall.songpage", "Prev page", {"delta": -1}),
+         "4,2": act("com.bschur.zoomcall.songpage", "Next page", {"delta": 1})}
+for r in range(3):
+    for c in range(5):
+        k = f"{c},{r}"
+        if k not in spage:
+            spage[k] = act("com.bschur.zoomcall.song", "Song", {})
+json.dump({"Controllers": [{"Actions": spage, "Type": "Keypad"}], "Icon": "", "Name": ""},
+          open(f"{sdir}/manifest.json", "w"))
+print("song page", sid, "index 3 with", sum(a["UUID"].endswith(".song") for a in spage.values()), "song slots")
+
+hm = json.load(open(f"{hdir}/manifest.json"))
+icon(f"{hdir}/Images", "k-songs\t144\t🎶\tSongs\t#2d3a46\n")
+hm["Controllers"][0]["Actions"]["4,2"] = act("com.bschur.zoomcall.songs", "Songs", image="Images/k-songs.png")
+json.dump(hm, open(f"{hdir}/manifest.json", "w"))
+print("home 4,2 -> Song Picker")

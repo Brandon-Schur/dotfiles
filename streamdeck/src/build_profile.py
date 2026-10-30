@@ -97,9 +97,18 @@ for (c, r), p in zip(_slots, PLAYLISTS):
     page2[f"{c},{r}"] = act(MINE, "com.bschur.zoomcall.playlist", p["name"], {"id": p.get("id", ""), "uri": p.get("uri", ""), "name": p["name"]})
 
 
+# Page index 3: song picker (plugin.js SONG_PAGE). Back, prev/next page, 12 song slots filled at runtime.
+page3 = {"0,0": act(MINE, "com.bschur.zoomcall.home", "Back", {"toCall": True}, image="k-back"),
+         "3,2": act(MINE, "com.bschur.zoomcall.songpage", "Prev page", {"delta": -1}),
+         "4,2": act(MINE, "com.bschur.zoomcall.songpage", "Next page", {"delta": 1})}
+for _r in range(3):
+    for _c in range(5):
+        page3.setdefault(f"{_c},{_r}", act(MINE, "com.bschur.zoomcall.song", "Song", {}))
+
+
 def main(icon_dir, out):
     # Page index 2 is the playlist picker (plugin.js PLAYLIST_PAGE).
-    pages = [(str(uuid.uuid4()), page0), (str(uuid.uuid4()), page1), (str(uuid.uuid4()), page2)]
+    pages = [(str(uuid.uuid4()), page0), (str(uuid.uuid4()), page1), (str(uuid.uuid4()), page2), (str(uuid.uuid4()), page3)]
     prof = str(uuid.uuid4()).upper()
     top = {
         "Device": {"Model": "20GBL9901", "UUID": ""},

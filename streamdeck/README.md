@@ -16,7 +16,7 @@ Accessibility API by a small Swift helper, `zoomctl`.
 | Slack | Outlook | Next meeting | Slack focus 🔭 | Slack DnD 🍅 |
 |---|---|---|---|---|
 | Album art | Album art | ⏮ | ⏯ | ⏭ |
-| Album art | Album art | 🔀 | 🎵 Playlists | *(empty)* |
+| Album art | Album art | 🔀 | 🎵 Playlists | 🎶 Songs |
 
 **Zoom Call page** (switches in automatically during a meeting):
 
@@ -26,6 +26,10 @@ Accessibility API by a small Swift helper, `zoomctl`.
 | 🔥 | 👀 | 🙌 | 🏠 Home | More ▸ |
 
 **More page:** 🐱 `:gr_meow_thinking:`, 😮, 💯 / Record, Chat, Participants / 🏠 Home, ◀ Back.
+
+**Song picker:** ◀ Back (top-left), 12 songs, and ◀ / ▶ page keys (bottom-right, with a page count).
+Shows the playlist, Liked Songs or album that's playing now (or the most recently played playlist);
+picking a song plays it in that context and returns home.
 
 **Playlist picker:** ◀ Back plus 14 playlists. Picking one plays it and returns to the
 home page; during a meeting, Back returns to the call page instead.
@@ -40,7 +44,8 @@ home page; during a meeting, Back returns to the call page instead.
 | Slack DnD 🍅 | **On:** turns focus mode off, picks the recent status "🍅 Focus", ticks "Pause notifications until status is cleared" (VIPs still get through), saves. **Off:** clears the status and resumes notifications. State is read from Slack every 5 s. |
 | Album art | The current Spotify cover split across a 2×2 block, with track and artist. Pressing opens Spotify. |
 | ⏮ ⏯ ⏭ 🔀 | Elgato's Spotify plugin. |
-| Playlists | Plays via AppleScript `play track "spotify:playlist:<id>"` (Liked Songs: `spotify:user:<user id>:collection`). Covers come from Spotify's public oEmbed endpoint; no login. Spotify grabs focus when it starts playing, which makes [AeroSpace](https://github.com/nikitabobko/AeroSpace) jump a monitor to Spotify's workspace; the plugin snapshots each monitor's visible workspace before playing and switches them back afterwards (one `aerospace eval` call). |
+| Playlists | Once logged in to the Spotify Web API (see below), the picker shows Liked Songs, then **your library's playlists, most recently played first** (from your last 50 plays), refreshed when the picker opens. Before login it falls back to `src/playlists.json`. Plays via AppleScript `play track "spotify:playlist:<id>"` (Liked Songs: `spotify:user:<user id>:collection`). Covers come from Spotify's public oEmbed endpoint; no login. Spotify grabs focus when it starts playing, which makes [AeroSpace](https://github.com/nikitabobko/AeroSpace) jump a monitor to Spotify's workspace; the plugin snapshots each monitor's visible workspace before playing and switches them back afterwards (one `aerospace eval` call). |
+| Songs | `spotify-api.js context` reads what's playing; `tracks <uri> <offset> 12` loads one page at a time (album covers cached). A pick runs AppleScript `play track "<track>" in context "<playlist>"`, then restores AeroSpace workspaces like the playlist keys. |
 | Zoom call keys | Mute, Video, Share, Leave, Record, Raise Hand and 👍👏❤️😂🎉😮 use Elgato's Zoom plugin. |
 | Extra reactions | 🔥 👀 🙌 💯 and custom emoji drive Zoom's **React → More reactions** picker: search by shortcode, click the result (~1–2 s). |
 | Chat / Participants | Zoom's **View → Show/Hide** menu items. |
@@ -61,6 +66,19 @@ negative checks switch back, unless you already went home with 🏠.
 - **Automation** permission for Stream Deck → Spotify (macOS asks the first time).
 - Slack DnD: set the status "🍅 Focus" by hand once so it's in Slack's **Recent** statuses.
 
+## Spotify Web API (playlist order)
+
+One-time setup:
+
+1. At [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard), create an app with the
+   **Web API** and Redirect URI `http://127.0.0.1:4202` (must match `REDIRECT_URI` in `bin/spotify-api.js`).
+2. Run `node com.bschur.zoomcall.sdPlugin/bin/spotify-api.js login <client id>` and click **Agree** in the browser.
+
+It uses Authorization Code + PKCE (no client secret) with read-only scopes (recently played, currently playing,
+playlists, library). The login listener binds `127.0.0.1` only and exits after one callback. The refresh token is
+stored at `~/.config/streamdeck-spotify/token.json` (mode 600, outside the repo); it lasts 180 days of
+non-use. `spotify-api.js playlists` prints the sorted list. After a scope change, re-run `login`.
+
 ## Layout of this directory
 
 ```
@@ -70,12 +88,13 @@ src/deckart.swift           renders dynamic key images (badges, album art, cover
 src/make-icons.swift        renders static emoji icons
 src/build_profile.py        builds the bundled "Zoom Call" profile (call, More, playlist pages)
 src/build_home_page.py      rewrites the Default Profile's home page
-src/playlists_page.py       installs the playlist picker + home Playlists key
-src/playlists.json          the playlist list (edit this)
+src/playlists_page.py       installs the playlist + song picker pages and their home keys
+src/playlists.json          fallback playlist list (used until the Spotify API login)
 src/update_main_profile.py  one-time cleanup of the old folders (historical)
 com.bschur.zoomcall.sdPlugin/
   manifest.json             plugin + action definitions
   bin/plugin.js             the plugin (meeting switching, keys, polling)
+  bin/spotify-api.js        Spotify Web API login + recently-played playlist order
 ```
 
 ## Install on a new Mac

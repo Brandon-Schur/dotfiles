@@ -83,7 +83,11 @@ ws.on("message", (raw) => {
       onKeyDown(msg).catch((e) => log("keyDown error", String(e)));
       break;
     case "willAppear":
-      visible.set(msg.context, { action: msg.action, settings: (msg.payload && msg.payload.settings) || {} });
+      visible.set(msg.context, {
+        action: msg.action,
+        settings: (msg.payload && msg.payload.settings) || {},
+        coords: (msg.payload && msg.payload.coordinates) || null,
+      });
       lastImage.delete(msg.context);
       refreshSoon();
       break;
@@ -218,6 +222,12 @@ async function onKeyDown({ action, context, device, payload }) {
     case A + "playlists":
       switchProfile(device, PROFILE, PLAYLIST_PAGE);
       return;
+    case A + "songs":
+      return openSongs(context, device);
+    case A + "song":
+      return pressSong(context, device);
+    case A + "songpage":
+      return flipSongPage(s, context);
     default:
       return;
   }
@@ -269,6 +279,7 @@ function refreshSoon() {
     refreshSlack();
     renderSlackDnd();
     renderPlaylists();
+    renderSongs();
   }, 300);
 }
 
@@ -578,14 +589,67 @@ async function playlistCover(id) {
   return (await download(thumb, file)) ? file : "";
 }
 
+// Dynamic list from the Spotify Web API (spotify-api.js): Liked Songs, then most recently played.
+// Falls back to the fixed list in each key's settings until `spotify-api.js login` has been run.
+const SPOTIFY_API = path.join(__dirname, "spotify-api.js");
+let apiPlaylists = null;
+let apiFetchedAt = 0;
+let apiFetching = null;
+
+async function fetchApiPlaylists() {
+  if (apiFetching) return apiFetching;
+  apiFetching = (async () => {
+    const r = await run(process.execPath, [SPOTIFY_API, "playlists"], 30000);
+    if (r.code === 0) {
+      try {
+        apiPlaylists = JSON.parse(r.stdout);
+        apiFetchedAt = Date.now();
+      } catch {
+        log("spotify api: bad output");
+      }
+    } else if (r.code !== 3) {
+      log("spotify api failed", r.stderr.trim()); // 3 = not logged in yet (expected)
+    }
+  })().finally(() => (apiFetching = null));
+  return apiFetching;
+}
+
+/** Slot index of a picker key: row-major, skipping the Back key at 0,0. */
+function playlistSlot(coords) {
+  if (!coords) return -1;
+  return coords.row * 5 + coords.column - 1;
+}
+
+function playlistFor(v) {
+  if (apiPlaylists) {
+    const p = apiPlaylists[playlistSlot(v.coords)];
+    return p || null; // fewer playlists than keys: blank key
+  }
+  return v.settings;
+}
+
+async function coverFromUrl(id, url) {
+  if (!/^[A-Za-z0-9]{22}$/.test(id) || !/^https:\/\/[a-z0-9.-]*(scdn\.co|spotifycdn\.com)\//.test(url)) return "";
+  const file = path.join(COVER_DIR, `${id}.jpg`);
+  if (fs.existsSync(file)) return file;
+  return (await download(url, file)) ? file : "";
+}
+
 async function renderPlaylists() {
+  if (contextsFor("playlist").length === 0) return;
+  if (Date.now() - apiFetchedAt > 10 * 60 * 1000) await fetchApiPlaylists(); // refresh at most every 10 min
   for (const [ctx, v] of contextsFor("playlist")) {
-    const { id = "", name = "", uri = "" } = v.settings;
+    const p = playlistFor(v);
+    if (!p) {
+      await setKey(ctx, ["text", "", "", "#000000"]);
+      continue;
+    }
+    const { id = "", name = "", uri = "", image = "" } = p;
     if (/:collection$/.test(uri)) {
       await setKey(ctx, ["text", "💜", name || "Liked Songs", "#4b2bbf"]);
       continue;
     }
-    const cover = await playlistCover(id);
+    const cover = (image && (await coverFromUrl(id, image))) || (await playlistCover(id));
     if (cover) await setKey(ctx, ["cover", cover, name]);
     else await setKey(ctx, ["text", "♫", name || "Playlist", "#14532d"]);
   }
@@ -631,10 +695,12 @@ async function aerospaceRestore(before, ms = 2500) {
 
 const PLAYLIST_PAGE = 2; // third page of the bundled "Zoom Call" profile
 
-async function pressPlaylist(settings, context, device) {
+async function pressPlaylist(keySettings, context, device) {
+  const v = visible.get(context);
+  const settings = (v && playlistFor(v)) || keySettings;
   const id = settings.id || "";
   // Either a playlist id, or a full URI such as Liked Songs ("spotify:user:<id>:collection").
-  const uri = /^spotify:user:\d+:collection$/.test(settings.uri || "") ? settings.uri
+  const uri = /^spotify:user:[\w.-]+:collection$/.test(settings.uri || "") ? settings.uri
     : /^[A-Za-z0-9]{22}$/.test(id) ? `spotify:playlist:${id}` : "";
   if (!uri) return send({ event: "showAlert", context });
   const before = await aerospaceSnapshot();
@@ -651,6 +717,138 @@ tell application "Spotify" to play track "${uri}"`);
     send({ event: "showOk", context });
     if (onCall.has(device) && !inMeeting) switchProfile(device); // back to the home page
     aerospaceRestore(before);
+    apiFetchedAt = 0; // next visit re-sorts by what was just played
     setTimeout(() => refreshSpotify(true), 1500);
   }
+}
+
+// --- Song picker for the current playlist (page index 3 of the Zoom Call profile) ---
+// Keys: Back 0,0 · prev page 3,2 · next page 4,2 · 12 songs in the remaining slots (row-major).
+const SONG_PAGE = 3;
+const SONG_SLOTS = [];
+for (let r = 0; r < 3; r++)
+  for (let c = 0; c < 5; c++) if (!(c === 0 && r === 0) && !(r === 2 && c >= 3)) SONG_SLOTS.push(`${c},${r}`);
+const PER_PAGE = SONG_SLOTS.length; // 12
+const ART_CACHE = path.join(PLUGIN_DIR, "logs", "albums");
+fs.mkdirSync(ART_CACHE, { recursive: true });
+
+let songs = { context: null, current: null, page: 0, total: 0, items: {} }; // items: index -> track
+
+async function spotifyApi(args, timeout = 20000) {
+  const r = await run(process.execPath, [SPOTIFY_API, ...args], timeout);
+  if (r.code !== 0) {
+    if (r.code !== 3) log("spotify api", args[0], "failed", r.stderr.trim());
+    return { error: r.code === 3 ? "login" : "api" };
+  }
+  try {
+    return JSON.parse(r.stdout);
+  } catch {
+    return { error: "api" };
+  }
+}
+
+async function loadSongPage(page) {
+  const start = page * PER_PAGE;
+  const missing = [...Array(PER_PAGE).keys()].some((i) => !(start + i in songs.items) && (songs.total === 0 || start + i < songs.total));
+  if (!missing) return true;
+  const r = await spotifyApi(["tracks", songs.context, String(start), String(PER_PAGE)]);
+  if (r.error) return false;
+  songs.total = r.total;
+  r.items.forEach((t, i) => (songs.items[start + i] = t));
+  return true;
+}
+
+async function albumArt(t) {
+  if (!t.albumId || !/^[A-Za-z0-9]{22}$/.test(t.albumId) || !/^https:\/\/i\.scdn\.co\//.test(t.image)) return "";
+  const file = path.join(ART_CACHE, `${t.albumId}.jpg`);
+  if (fs.existsSync(file)) return file;
+  return (await download(t.image, file)) ? file : "";
+}
+
+function coordKey(v) {
+  return v.coords ? `${v.coords.column},${v.coords.row}` : "";
+}
+
+let songRenderSeq = 0;
+async function renderSongs() {
+  if (contextsFor("song").length === 0 && contextsFor("songpage").length === 0) return;
+  const seq = ++songRenderSeq;
+  const pages = Math.max(1, Math.ceil(songs.total / PER_PAGE));
+  for (const [ctx, v] of contextsFor("songpage")) {
+    const delta = Number(v.settings.delta || 1);
+    const has = delta < 0 ? songs.page > 0 : songs.page < pages - 1;
+    const label = `${songs.page + 1}/${pages}`;
+    await setKey(ctx, has ? ["text", delta < 0 ? "◀" : "▶", label, "#2d3a46"] : ["text", "", label, "#000000"]);
+  }
+  for (const [ctx, v] of contextsFor("song")) {
+    if (seq !== songRenderSeq) return; // a newer page change superseded this render
+    const slot = SONG_SLOTS.indexOf(coordKey(v));
+    const t = slot < 0 ? null : songs.items[songs.page * PER_PAGE + slot];
+    if (!t) {
+      await setKey(ctx, ["text", "", "", "#000000"]);
+      continue;
+    }
+    const caption = (t.uri && t.uri === songs.current ? "▶ " : "") + t.name;
+    const art = await albumArt(t);
+    await setKey(ctx, art ? ["cover", art, caption] : ["text", "♫", caption, "#14532d"]);
+  }
+}
+
+async function openSongs(context, device) {
+  const now = await spotifyApi(["context"]);
+  if (now.error === "login") {
+    log("song picker: run `spotify-api.js login <client id>` to grant the currently-playing permission");
+    return send({ event: "showAlert", context });
+  }
+  // Nothing playing (or playing outside a playlist): fall back to the most recently played playlist.
+  let ctxUri = !now.error && now.context;
+  if (!ctxUri || !/^spotify:(playlist|album|user:[^:]+:collection)/.test(ctxUri)) {
+    if (!apiPlaylists) await fetchApiPlaylists();
+    const recent = (apiPlaylists || []).filter((p) => p.lastPlayed).sort((a, b) => b.lastPlayed - a.lastPlayed)[0];
+    ctxUri = recent ? recent.uri : null;
+  }
+  if (!ctxUri) return send({ event: "showAlert", context });
+  if (songs.context !== ctxUri) songs = { context: ctxUri, current: null, page: 0, total: 0, items: {} };
+  songs.current = (!now.error && now.track) || null;
+  if (!(await loadSongPage(songs.page))) return send({ event: "showAlert", context });
+  // Start on the page holding the current song, if it's within what we've loaded.
+  const idx = Object.keys(songs.items).find((i) => songs.items[i] && songs.items[i].uri === songs.current);
+  if (idx !== undefined) songs.page = Math.floor(Number(idx) / PER_PAGE);
+  for (const [ctx] of [...contextsFor("song"), ...contextsFor("songpage")]) lastImage.delete(ctx);
+  switchProfile(device, PROFILE, SONG_PAGE);
+  renderSongs();
+}
+
+async function flipSongPage(settings, context) {
+  const pages = Math.max(1, Math.ceil(songs.total / PER_PAGE));
+  const next = songs.page + Number(settings.delta || 1);
+  if (next < 0 || next >= pages) return;
+  songs.page = next;
+  if (!(await loadSongPage(next))) return send({ event: "showAlert", context });
+  renderSongs();
+}
+
+async function pressSong(context, device) {
+  const v = visible.get(context);
+  const slot = v ? SONG_SLOTS.indexOf(coordKey(v)) : -1;
+  const t = slot < 0 ? null : songs.items[songs.page * PER_PAGE + slot];
+  if (!t || !/^spotify:track:[A-Za-z0-9]{22}$/.test(t.uri) || !/^spotify:[\w:.-]+$/.test(songs.context || "")) {
+    return send({ event: "showAlert", context });
+  }
+  const before = await aerospaceSnapshot();
+  const r = await osa(`
+if application "Spotify" is not running then
+  tell application "Spotify" to launch
+  delay 3
+end if
+tell application "Spotify" to play track "${t.uri}" in context "${songs.context}"`);
+  if (r.code !== 0) {
+    log("song play failed", t.uri, r.stderr.trim());
+    return send({ event: "showAlert", context });
+  }
+  send({ event: "showOk", context });
+  songs.current = t.uri;
+  if (onCall.has(device) && !inMeeting) switchProfile(device); // back to the home page
+  aerospaceRestore(before);
+  setTimeout(() => refreshSpotify(true), 1500);
 }
