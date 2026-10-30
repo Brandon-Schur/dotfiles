@@ -66,18 +66,59 @@ negative checks switch back, unless you already went home with 🏠.
 - **Automation** permission for Stream Deck → Spotify (macOS asks the first time).
 - Slack DnD: set the status "🍅 Focus" by hand once so it's in Slack's **Recent** statuses.
 
-## Spotify Web API (playlist order)
+## Spotify Web API (playlist order + song picker)
 
-One-time setup:
+The playlist order and the song picker read your Spotify data through the Web API. This needs a free,
+personal Spotify developer app and a one-time browser login. Without it, the playlist picker falls back
+to `src/playlists.json` and the 🎶 Songs key shows a warning.
 
-1. At [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard), create an app with the
-   **Web API** and Redirect URI `http://127.0.0.1:4202` (must match `REDIRECT_URI` in `bin/spotify-api.js`).
-2. Run `node com.bschur.zoomcall.sdPlugin/bin/spotify-api.js login <client id>` and click **Agree** in the browser.
+### 1. Create the Spotify app
 
-It uses Authorization Code + PKCE (no client secret) with read-only scopes (recently played, currently playing,
-playlists, library). The login listener binds `127.0.0.1` only and exits after one callback. The refresh token is
-stored at `~/.config/streamdeck-spotify/token.json` (mode 600, outside the repo); it lasts 180 days of
-non-use. `spotify-api.js playlists` prints the sorted list. After a scope change, re-run `login`.
+1. Open [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard), log in with your
+   Spotify account, and click **Create app**.
+2. Fill in:
+   - **App name / description:** anything (e.g. "Stream Deck").
+   - **Redirect URI:** `http://127.0.0.1:4202`, then click **Add**. It must match exactly: `http`
+     (Spotify allows plain http for loopback addresses only), `127.0.0.1` rather than `localhost`,
+     port `4202`, and no path or trailing slash.
+   - **Which API/SDKs:** tick **Web API**.
+3. Save, open the app's **Settings**, and copy the **Client ID** (32 hex characters). The client secret
+   isn't needed.
+
+To use a different port or URI, change `PORT` / `REDIRECT_URI` at the top of `bin/spotify-api.js` to
+match what you registered. The listener only accepts callbacks at `/` (the path of that URI).
+
+### 2. Log in
+
+```bash
+node com.bschur.zoomcall.sdPlugin/bin/spotify-api.js login <client id>
+```
+
+This opens Spotify's consent page in your default browser. Click **Agree**; the tab then says
+"Spotify connected to Stream Deck" and the command prints `Saved token to ...`. If the browser shows
+`INVALID_CLIENT: Invalid redirect URI`, the URI in the dashboard doesn't match step 1 exactly.
+
+### 3. Check it
+
+```bash
+node com.bschur.zoomcall.sdPlugin/bin/spotify-api.js playlists   # Liked Songs + playlists, recent first
+node com.bschur.zoomcall.sdPlugin/bin/spotify-api.js context     # what's playing now
+```
+
+### How it works
+
+- Authorization Code + PKCE, so no client secret is stored anywhere. Scopes are read-only:
+  `user-read-recently-played`, `user-read-currently-playing`, `playlist-read-private`,
+  `playlist-read-collaborative`, `user-library-read`. Playback itself goes through Spotify's AppleScript.
+- During `login`, a listener on `127.0.0.1:4202` (reachable from this Mac only) waits for the one callback
+  whose `state` matches, exchanges the code, and exits. It gives up after 5 minutes.
+- The refresh token is stored at `~/.config/streamdeck-spotify/token.json` (mode 600, outside the repo)
+  and renews itself on use. Spotify expires it after 180 days without use; re-run `login` then, and after
+  adding scopes in `SCOPES`.
+- An app in Spotify's **Development mode** only works for accounts listed under **User Management**;
+  the owner's account is included automatically.
+- Liked Songs can appear in API responses under a playlist id (`37i9dQZF1F...`) whose name is
+  "Liked Songs"; that's expected.
 
 ## Layout of this directory
 
