@@ -1,0 +1,270 @@
+/*
+ * bschur_custom theme for Sharp Tabs
+ * Palette source: alacritty/bschur_custom.toml (dark) and the "day"
+ * values in ~/dotfiles/nvim/lua/plugins/tokyonight.lua (light).
+ *
+ * Install: Sharp Tabs Settings > Advanced > Custom CSS > enable, paste this.
+ * Values are shadcn-style HSL triplets (Sharp Tabs wraps them in hsl()).
+ * The doubled class (.dark.dark) out-ranks Sharp Tabs' built-in color
+ * variants like ".dark.gray", so any base color choice is overridden.
+ */
+
+/* Dark: bschur_custom */
+html.dark.dark {
+    --background: 215.3 22.1% 15.1%; /* #1e252f */
+    --foreground: 215 22.2% 89.4%; /* #dee3ea */
+    --card: 212.7 18% 12%; /* #191e24 */
+    --card-foreground: 215 22.2% 89.4%; /* #dee3ea */
+    --popover: 212.7 18% 12%; /* #191e24 */
+    --popover-foreground: 215 22.2% 89.4%; /* #dee3ea */
+    --primary: 196 80.6% 53.5%; /* #29b5e8 */
+    --primary-foreground: 212.7 18% 12%; /* #191e24 */
+    --secondary: 216 18.5% 21.2%; /* #2c3440 */
+    --secondary-foreground: 215 22.2% 89.4%; /* #dee3ea */
+    --muted: 216 18.5% 21.2%; /* #2c3440 */
+    --muted-foreground: 219.4 17.6% 61%; /* #8a96ad */
+    --accent: 220.8 41.7% 24.9%; /* #25365a */
+    --accent-foreground: 215 22.2% 89.4%; /* #dee3ea */
+    --destructive: 349.7 84.5% 59.4%; /* #ef405e */
+    --destructive-foreground: 216 29.4% 96.7%; /* #f4f6f9 */
+    --border: 216 17.7% 27.6%; /* #3a4453 */
+    --input: 216 17.7% 27.6%; /* #3a4453 */
+    --ring: 196 80.6% 53.5%; /* #29b5e8 */
+    --chart-1: 215.8 91.9% 66.1%; /* #5999f8 */
+    --chart-2: 158.1 64.4% 51.6%; /* #34d399 */
+    --chart-3: 43.9 96.6% 65.9%; /* #fccf54 */
+    --chart-4: 263.3 76.6% 74.9%; /* #b48ef0 */
+    --chart-5: 348.1 89.8% 69.2%; /* #f76a86 */
+    /* tab group colors (RGB channels) */
+    --group-grey: 138 150 173; /* #8a96ad */
+    --group-grey-deep: 112 129 154; /* #70819a */
+    --group-blue: 89 153 248; /* #5999f8 */
+    --group-blue-deep: 66 120 194; /* #4278c2 */
+    --group-red: 247 106 134; /* #f76a86 */
+    --group-red-deep: 196 86 106; /* #c4566a */
+    --group-yellow: 252 207 84; /* #fccf54 */
+    --group-yellow-deep: 201 165 68; /* #c9a544 */
+    --group-green: 52 211 153; /* #34d399 */
+    --group-green-deep: 42 158 120; /* #2a9e78 */
+    --group-pink: 224 85 154; /* #e0559a */
+    --group-pink-deep: 194 74 133; /* #c24a85 */
+    --group-purple: 180 142 240; /* #b48ef0 */
+    --group-purple-deep: 113 96 192; /* #7160c0 */
+    --group-cyan: 41 181 232; /* #29b5e8 */
+    --group-cyan-deep: 36 147 194; /* #2493c2 */
+    --group-orange: 240 163 94; /* #f0a35e */
+    --group-orange-deep: 201 134 76; /* #c9864c */
+}
+
+/* Light: bschur_custom day */
+html.light.light {
+    --background: 0 0% 100%; /* #ffffff */
+    --foreground: 217.5 8.3% 18.8%; /* #2c2f34 */
+    --card: 0 0% 96.9%; /* #f7f7f7 */
+    --card-foreground: 217.5 8.3% 18.8%; /* #2c2f34 */
+    --popover: 0 0% 100%; /* #ffffff */
+    --popover-foreground: 217.5 8.3% 18.8%; /* #2c2f34 */
+    --primary: 216 81% 50.4%; /* #1a6ce7 */
+    --primary-foreground: 0 0% 100%; /* #ffffff */
+    --secondary: 216 41.7% 95.3%; /* #eef2f8 */
+    --secondary-foreground: 217.5 8.3% 18.8%; /* #2c2f34 */
+    --muted: 216 41.7% 95.3%; /* #eef2f8 */
+    --muted-foreground: 220.5 17.7% 44.3%; /* #5d6a85 */
+    --accent: 216.6 100% 92%; /* #d6e6ff */
+    --accent-foreground: 217.5 8.3% 18.8%; /* #2c2f34 */
+    --destructive: 351.2 83.5% 45.1%; /* #d3132f */
+    --destructive-foreground: 0 0% 100%; /* #ffffff */
+    --border: 217.5 23.5% 86.7%; /* #d5dbe5 */
+    --input: 217.5 23.5% 86.7%; /* #d5dbe5 */
+    --ring: 200.2 72.4% 50.2%; /* #249edc */
+    --chart-1: 216 81% 50.4%; /* #1a6ce7 */
+    --chart-2: 162.9 93.5% 24.3%; /* #047857 */
+    --chart-3: 46.5 100% 46.3%; /* #ecb700 */
+    --chart-4: 250.8 72.5% 70%; /* #8f7bea */
+    --chart-5: 351.2 83.5% 45.1%; /* #d3132f */
+    /* tab group colors (RGB channels) */
+    --group-grey: 93 106 133; /* #5d6a85 */
+    --group-grey-deep: 58 68 83; /* #3a4453 */
+    --group-blue: 26 108 231; /* #1a6ce7 */
+    --group-blue-deep: 0 76 190; /* #004cbe */
+    --group-red: 211 19 47; /* #d3132f */
+    --group-red-deep: 165 15 37; /* #a50f25 */
+    --group-yellow: 236 183 0; /* #ecb700 */
+    --group-yellow-deep: 201 154 0; /* #c99a00 */
+    --group-green: 4 120 87; /* #047857 */
+    --group-green-deep: 3 94 68; /* #035e44 */
+    --group-pink: 194 53 124; /* #c2357c */
+    --group-pink-deep: 158 42 100; /* #9e2a64 */
+    --group-purple: 113 96 192; /* #7160c0 */
+    --group-purple-deep: 90 74 163; /* #5a4aa3 */
+    --group-cyan: 36 158 220; /* #249edc */
+    --group-cyan-deep: 26 127 179; /* #1a7fb3 */
+    --group-orange: 217 122 43; /* #d97a2b */
+    --group-orange-deep: 181 98 31; /* #b5621f */
+}
+
+/* Sidebar/popup background. Sharp Tabs hardcodes these outside the theme
+ * variables: an inline style on <html> (#0d0d0d / #fafafa) and, when the
+ * "Background color" setting is on, an injected body { background } rule.
+ * !important is required to beat the inline style. */
+html.dark.dark,
+html.dark.dark body {
+    background: #1e252f !important;
+    color: #dee3ea;
+}
+html.light.light,
+html.light.light body {
+    background: #ffffff !important;
+    color: #2c2f34;
+}
+
+/* Selection / scrollbar accents */
+::selection { background: #25365a; color: #dee3ea; }
+html.light.light ::selection { background: #d6e6ff; color: #2c2f34; }
+* { scrollbar-color: #3a4453 transparent; }
+html.light.light * { scrollbar-color: #c5ccd8 transparent; }
+
+/* ------------------------------------------------------------------
+ * Rail mode: compact layout when the sidebar is collapsed.
+ * Kicks in whenever the Sharp Tabs page is <= 160px wide, which is what
+ * ~/VivaldiMods/SharpTabsAutoHide.css does when the mouse isn't over it.
+ * Items are a fixed --rail wide, pinned to the left edge. Keep
+ * --rail + 2 * --rail-gap close to --st-rail in SharpTabsAutoHide.css
+ * (100vw-based widths don't work in the Vivaldi panel page).
+ *
+ * Rule: nothing here may change any element's HEIGHT or vertical spacing,
+ * and hidden chrome uses visibility (keeps its space), never display:none.
+ * That keeps every tab at the same y position collapsed and expanded, so
+ * the tab under the cursor stays under the cursor when the panel opens.
+ *   - tabs: favicon + start of the title; active tab bold with a cyan bar
+ *   - groups: colored pill with the start of the name and the tab count
+ * ------------------------------------------------------------------ */
+@media (max-width: 160px) {
+    html { --rail-gap: 4px; --rail: 62px; }
+
+    /* chrome that doesn't fit: hidden but still taking its space */
+    #tabs-manager-header,
+    #selected-tabs-notice,
+    .workspace-bar,
+    .tab-close-button,
+    .tab-pin-button,
+    .tab-discarded-icon,
+    .tab-media-container,
+    .group-expand-icon-container,
+    .group-audio-icon,
+    .group-discarded-icon,
+    .group-current-icon {
+        visibility: hidden !important;
+    }
+    /* zero-width but same height, so titles get the room */
+    .tab-close-button,
+    .tab-pin-button,
+    .tab-discarded-icon,
+    .tab-media-container,
+    .group-expand-icon-container,
+    .group-audio-icon,
+    .group-discarded-icon,
+    .group-current-icon {
+        width: 0 !important;
+        min-width: 0 !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        overflow: hidden !important;
+    }
+    #tabs-manager-footer { visibility: hidden !important; }
+
+    #tabs-manager-container { margin-left: 0 !important; }
+    #tabs-scroll-container { scrollbar-width: none; }
+
+    /* tabs: favicon + start of the title on one line (row height untouched) */
+    html body div.tab-item {
+        justify-content: flex-start !important;
+        padding-left: 4px !important;
+        padding-right: 2px !important;
+        margin-left: var(--rail-gap) !important;
+        margin-right: 0 !important;
+        width: var(--rail) !important;
+    }
+    html body div.tab-item > div,
+    .tab-content-wrapper {
+        justify-content: flex-start !important;
+        gap: 4px !important;
+        min-width: 0;
+    }
+    html body div.tab-item .tab-favicon-container { margin: 0 !important; flex: none; }
+    html body .tab-title {
+        display: block !important;
+        flex: 1 1 0 !important;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: clip !important;
+        white-space: nowrap !important;
+        font-size: 10px;
+        letter-spacing: -0.02em;
+        text-align: left !important;
+    }
+    .active-tab-item { box-shadow: inset 3px 0 0 hsl(var(--primary)) !important; }
+    .active-tab-item .tab-title { font-weight: 700; }
+    .discarded-tab-item .tab-favicon-container,
+    .discarded-tab-item .tab-title { opacity: 0.45; }
+
+    /* groups: pill with the start of the name and the count (height untouched) */
+    html body .group-item-container { margin-left: 0 !important; }
+    .group-item {
+        justify-content: space-between !important;
+        gap: 2px !important;
+        padding-left: 4px !important;
+        padding-right: 2px !important;
+        margin-left: var(--rail-gap) !important;
+        margin-right: 0 !important;
+        width: var(--rail) !important;
+    }
+    .group-item > div { gap: 0 !important; min-width: 0; }
+    .group-item > div:first-child { flex: 1 1 0 !important; }
+    html body .group-title {
+        display: block !important;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: clip !important;
+        white-space: nowrap !important;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+    }
+    html body .group-add-tab-button {
+        display: block !important;
+        width: auto !important;
+        min-width: 0 !important;
+        padding: 0 !important;
+        font-size: 10px;
+        opacity: 0.85;
+    }
+    /* the hover "+" makes no sense in the rail; always show the count */
+    .group-add-tab-button > div:first-child { display: none !important; }
+    .group-add-tab-button > div:last-child { display: flex !important; font-size: 10px; }
+
+    /* tabs inside an open group: thin colored rail instead of an indent */
+    .group-tabs-container {
+        margin-left: var(--rail-gap) !important;
+        margin-right: 0 !important;
+        padding-left: 0 !important;
+        border-left-width: 3px !important;
+        width: var(--rail) !important;
+    }
+    html body .group-tabs-container div.tab-item {
+        margin-left: 2px !important;
+        width: calc(var(--rail) - 5px) !important;
+    }
+
+    .tabs-separator { width: calc(var(--rail) + var(--rail-gap)) !important; }
+
+    /* Undo the rest of Sharp Tabs' own narrow mode (globals.css,
+     * max-width: 84px); "html body" out-ranks its selectors. */
+    html body .group-expand-icon { margin-left: 0 !important; }
+}
+
+/* Optional: Nerd Font for tab titles (uncomment to use)
+#tabs-manager-container { font-family: "JetBrainsMono Nerd Font", var(--font-sans); }
+*/

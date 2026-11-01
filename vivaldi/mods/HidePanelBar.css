@@ -1,0 +1,16 @@
+/* Hide Vivaldi's vertical panel bar (the icon strip beside the side panel).
+ * Show it again with Vivaldi's built-in "Panel Toggle" command
+ * (Settings > Keyboard > View > Panel Toggle): when that's on, Vivaldi adds
+ * the .button class to #panels-container and this rule stops applying.
+ * To undo entirely: remove the @import line in Import.css and restart. */
+#panels-container:not(.button) #switch {
+  display: none !important;
+}
+
+/* Vivaldi sizes #panels-container as panel width + bar width (inline style)
+ * and pins the panel content to a fixed width, so hiding the bar leaves an
+ * empty strip. Let the panel content fill the space the bar used. */
+#panels-container:not(.button) .panel-collapse-guard {
+  min-width: 100% !important;
+  max-width: 100% !important;
+}

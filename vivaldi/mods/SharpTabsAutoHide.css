@@ -1,0 +1,103 @@
+/* Auto-hide the side panel (Sharp Tabs) down to a narrow rail.
+ *
+ * Collapsed: the panel takes --st-rail px and the page sits beside it.
+ * Hover:     the panel slides out to --st-expanded px OVER the page, so the
+ *            page never reflows. It collapses again when the mouse leaves.
+ *
+ * The rail is narrow enough that Sharp Tabs' own Custom CSS switches to its
+ * compact layout (favicons + group pills) via @media (max-width: 100px).
+ * See ~/.config/sharptabs/bschur_custom.css, "Rail mode" section.
+ *
+ * Applies to whichever side panel is open (only Sharp Tabs in practice).
+ * Disabled when Vivaldi's Panel Toggle is on (.button, same switch as
+ * HidePanelBar.css) or when the panel is closed (.icons).
+ * Drag-resizing no longer works; change --st-expanded instead.
+ * To undo: remove the @import line in Import.css and restart Vivaldi. */
+
+#browser {
+  --st-rail: 72px;
+  --st-expanded: 257px;  /* matches the panel width in Preferences */
+  --st-open-delay: 150ms;  /* hover this long before it opens */
+  --st-close-delay: 300ms; /* grace period when the mouse leaves */
+  --st-duration: 120ms;
+}
+
+/* Reserve only the rail in the page layout. */
+#panels-container:not(.button):not(.icons) {
+  width: var(--st-rail) !important;
+  min-width: var(--st-rail) !important;
+  max-width: var(--st-rail) !important;
+  flex: 0 0 var(--st-rail) !important;
+  position: relative;
+  z-index: 10;
+  overflow: visible !important;
+  contain: none !important;
+}
+
+#panels-container:not(.button):not(.icons) #panels {
+  width: var(--st-rail) !important;
+  overflow: visible !important;
+  contain: none !important;
+}
+
+/* The panel itself floats, so widening it covers the page instead of
+ * pushing it. Close is delayed by --st-close-delay. */
+#panels-container:not(.button):not(.icons) .panel-group {
+  position: absolute !important;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--st-rail) !important;
+  overflow: hidden;
+  z-index: 10;
+  transition: width var(--st-duration) ease-out var(--st-close-delay),
+              box-shadow var(--st-duration) ease-out var(--st-close-delay);
+}
+
+#panels-container.right:not(.button):not(.icons) .panel-group {
+  left: auto;
+  right: 0;
+}
+
+#panels-container:not(.button):not(.icons):hover .panel-group {
+  width: var(--st-expanded) !important;
+  box-shadow: 4px 0 14px -4px rgba(0, 0, 0, 0.5);
+  transition-delay: var(--st-open-delay);
+}
+
+#panels-container.right:not(.button):not(.icons):hover .panel-group {
+  box-shadow: -4px 0 14px -4px rgba(0, 0, 0, 0.5);
+}
+
+/* Vivaldi's web panel toolbar ("Sharp Tabs" title, back/forward/reload,
+ * close) is removed in both states, so the tab list starts at the same
+ * height collapsed and expanded. */
+#panels-container:not(.button):not(.icons) .webpanel-header {
+  display: none !important;
+}
+
+/* Panel background = Sharp Tabs background (#1e252f), so no strip of
+ * Vivaldi's own color or the page behind shows around it. */
+#panels-container:not(.button):not(.icons) .panel-group,
+#panels-container:not(.button):not(.icons) .webpanel,
+#panels-container:not(.button):not(.icons) .webpanel-content {
+  background-color: #1e252f !important;
+  backdrop-filter: none !important;
+}
+
+/* Panel content follows the panel width (HidePanelBar.css does the same
+ * for the non-hidden case; repeated here so this file stands alone). */
+#panels-container:not(.button):not(.icons) .panel-collapse-guard {
+  min-width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Make sure the Sharp Tabs page itself is resized to the rail, not just
+ * clipped, so its compact layout gets the real width. */
+#panels-container:not(.button):not(.icons) .webpanel,
+#panels-container:not(.button):not(.icons) .webpanel-content,
+#panels-container:not(.button):not(.icons) .webpanel-content webview {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
