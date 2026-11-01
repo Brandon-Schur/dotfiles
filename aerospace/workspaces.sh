@@ -8,11 +8,11 @@
 #   ws | desk (3 displays)   | laptop only
 #   ---+---------------------+-------------
 #    1 | Slack               | Slack
-#    2 | Vivaldi             | Vivaldi
+#    2 | Vivaldi             | Vivaldi + Zoom meeting
 #    3 | Alacritty           | Dashboard
 #    4 | Zoom meeting        | Alacritty
 #    5 | Dashboard           | Outlook
-#    6 | Outlook             | Zoom meeting
+#    6 | Outlook             | -
 #    7 | Spotify             | -
 #    8 | -                   | Spotify
 #    9 | parking             | parking
@@ -43,7 +43,7 @@ ws_for() {
         laptop:dashboard) echo 3 ;;
         laptop:alacritty) echo 4 ;;
         laptop:outlook)   echo 5 ;;
-        laptop:meeting)   echo 6 ;;
+        laptop:meeting)   echo 2 ;;
         laptop:spotify)   echo 8 ;;
         laptop:park)      echo 9 ;;
     esac

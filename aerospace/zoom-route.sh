@@ -7,7 +7,7 @@
 # from that rule) polls the title for a few seconds; if it turns into a
 # meeting window it goes to workspace $MEETING_WS (profile "meeting" role, see workspaces.sh) tiled side-by-side (h_tiles) as the
 # LEFT window at MEETING_WIDTH_PCT of the monitor width, then workspace 9 is
-# re-gridded.
+# re-gridded. The in-meeting chat panel is closed if Zoom opened it.
 #
 # AeroSpace passes the detected window as $AEROSPACE_WINDOW_ID; if that isn't
 # set we fall back to scanning all Zoom windows.
@@ -71,9 +71,32 @@ route_meetings() {
     return $moved
 }
 
+# Close the in-meeting chat panel if it's open. Zoom has no "chat closed by
+# default" setting and remembers the last panel state, so check the View menu:
+# it shows "Show chat" when the panel is closed, and another chat item (e.g.
+# "Hide chat") when it's open; click that one. Needs Accessibility, which this
+# script gets from AeroSpace (exec-and-forget from on-window-detected).
+close_chat() {
+    /usr/bin/osascript >/dev/null 2>&1 <<'OSA'
+tell application "System Events" to tell process "zoom.us"
+    repeat with mi in (menu items of menu 1 of menu bar item "View" of menu bar 1)
+        set n to name of mi
+        if n is not missing value and n contains "chat" and n does not start with "Show" then
+            click mi
+            exit repeat
+        end if
+    end repeat
+end tell
+OSA
+}
+
 # Poll ~6s for the title to appear.
 for _ in $(seq 1 20); do
-    if route_meetings; then break; fi
+    if route_meetings; then
+        # The panel can open a moment after the window, so check twice.
+        close_chat; sleep 2; close_chat
+        break
+    fi
     sleep 0.3
 done
 
