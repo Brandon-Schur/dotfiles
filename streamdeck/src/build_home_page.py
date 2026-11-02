@@ -2,7 +2,7 @@
 """Rewrite the Default Profile's main page as a notifications + Spotify home page.
 Run only while Stream Deck is quit.
 
-  Slack    Outlook   Next mtg   Focus 🔭   DnD 🍅
+  Slack    Outlook   Next mtg   DnD 🍅/🔭  Clock
   Art TL   Art TR    ⏮          ⏯           ⏭
   Art BL   Art BR    🔀         Playlists   (empty)
 
@@ -43,8 +43,9 @@ actions = {
     "0,0": mine("badge", "Slack", {"app": "slack", "mode": "total"}),
     "1,0": mine("badge", "Outlook", {"app": "outlook", "mode": "new"}),
     "2,0": mine("nextmeeting", "Next Meeting", {}),
-    "3,0": mine("dnd", "Slack Focus Mode", {}),
-    "4,0": mine("slackdnd", "Slack DnD", {"status": "Focus", "emoji": "tomato"}),
+    # tap = Slack DnD (🍅 Focus status + pause, VIPs ok); hold = Slack focus mode
+    "3,0": mine("slackdnd", "Slack DnD / Focus", {"status": "Focus", "emoji": "tomato"}),
+    "4,0": mine("clock", "Clock", {}),
     "0,1": mine("nowplaying", "Art", {"quadrant": 0}),
     "1,1": mine("nowplaying", "Art", {"quadrant": 1}),
     "0,2": mine("nowplaying", "Art", {"quadrant": 2}),

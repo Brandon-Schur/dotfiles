@@ -256,6 +256,34 @@
           "Image": "imgs/key-open"
         }
       ]
+    },
+    {
+      "UUID": "com.bschur.zoomcall.calltimer",
+      "Name": "Call Timer",
+      "Tooltip": "How long you've been on the Zoom call",
+      "Icon": "imgs/action-open",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/key-open"
+        }
+      ]
+    },
+    {
+      "UUID": "com.bschur.zoomcall.clock",
+      "Name": "Clock",
+      "Tooltip": "Current time and date",
+      "Icon": "imgs/action-open",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/key-open"
+        }
+      ]
     }
   ]
 }

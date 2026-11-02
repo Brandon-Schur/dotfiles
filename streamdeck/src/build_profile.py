@@ -3,8 +3,8 @@
 
 Page 0 (main call page)                     Page 1 (More)
   Share RaiseHand Mute  Video  Leave           🐱think 😮    💯
-  👍    👏        ❤️    😂     🎉              Record  Chat  People
-  🔥    👀        🙌    🏠Home More ▸                               🏠Home ◀Back
+  👍    👏        Timer 😂     🎉              Record  Chat  People
+  🔥    🙌        Clock 🏠Home More ▸                               🏠Home ◀Back
 
 👍 👏 ❤️ 😂 🎉 😮 use the Elgato Zoom plugin (Zoom's native reactions); the rest use
 zoomctl to drive Zoom's emoji picker.
@@ -69,9 +69,11 @@ page0 = {
     "0,0": zoom("screenshare", "Share Screen", {
         "monitor": '{"DeviceID":3,"FriendlyName":"Odyssey G7"}', "optimizeVideo": False, "shareSound": False}),
     "4,0": zoom("leavemeeting", "Leave or End", states=1),
-    "0,1": react("thumbsup"), "1,1": react("clap"), "2,1": react("heart"),
+    "0,1": react("thumbsup"), "1,1": react("clap"),
+    "2,1": act(MINE, "com.bschur.zoomcall.calltimer", "Call Timer", {}),
     "3,1": react("joy"), "4,1": react("tada"),
-    "0,2": picker("fire"), "1,2": picker("eyes"), "2,2": picker("raised"),
+    "0,2": picker("fire"), "1,2": picker("raised"),
+    "2,2": act(MINE, "com.bschur.zoomcall.clock", "Clock", {}),
     "3,2": act(MINE, "com.bschur.zoomcall.home", "Home", {}, image="k-home"),
     "4,2": act(MINE, "com.bschur.zoomcall.page", "More", {"page": 1}, image="k-more"),
 }

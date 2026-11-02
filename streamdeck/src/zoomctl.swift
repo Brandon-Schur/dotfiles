@@ -156,7 +156,15 @@ func cmdStatus() {
         if trusted { titles = windows(app).compactMap { str($0, kAXTitleAttribute) } }
     }
     let meeting = titles.contains(where: isMeetingTitle)
-    let obj: [String: Any] = ["trusted": trusted, "running": running, "meetingWindow": meeting, "titles": titles]
+    var obj: [String: Any] = ["trusted": trusted, "running": running, "meetingWindow": meeting, "titles": titles]
+    // Zoom's header button reads "My connected time is 01:47" (mm:ss or h:mm:ss).
+    if trusted, meeting, let (_, app) = zoomApp(), let win = meetingWindow(app),
+       let b = children(win).first(where: { labelMatches($0, "^My connected time is") }),
+       let l = labels(b).first(where: { $0.hasPrefix("My connected time is") }) {
+        let parts = l.replacingOccurrences(of: "My connected time is", with: "")
+            .trimmingCharacters(in: .whitespaces).split(separator: ":").compactMap { Int($0) }
+        if !parts.isEmpty { obj["connectedSeconds"] = parts.reduce(0) { $0 * 60 + $1 } }
+    }
     let data = try! JSONSerialization.data(withJSONObject: obj)
     print(String(data: data, encoding: .utf8)!)
 }
@@ -377,11 +385,20 @@ func cmdMeetings() {
     requireTrusted()
     guard let (_, app) = zoomApp() else { fail("zoom not running", code: 4) }
     guard let items = calendarEvents(app, openIfClosed: true) else { fail("calendar sidebar not found") }
+    // The sidebar can be paged to another date; only trust it when it's showing today.
+    if let main = windows(app).first(where: { str($0, kAXTitleAttribute) == "Zoom Workplace" }),
+       let picker = find(main, limit: 8000, { labelMatches($0, "^Select calendar date:") }),
+       !labelMatches(picker, "Today") {
+        fail("calendar sidebar is not showing today")
+    }
     var out: [[String: Any]] = []
     for it in items {
         let texts = findAll(it, limit: 200, { role($0) == "AXStaticText" }).compactMap { str($0, kAXValueAttribute) ?? str($0, kAXTitleAttribute) ?? str($0, kAXDescriptionAttribute) }
-        guard let title = texts.first,
-              texts.contains(where: { $0.hasPrefix("Today") }),
+        // Cards normally show "Today, <date>", but once people have joined that line is replaced
+        // by "N person(s) joined", so don't require it; just skip cards dated another day.
+        let otherDay = texts.contains { $0.range(of: "^(Tomorrow|Yesterday|(Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day|(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \\d)", options: .regularExpression) != nil }
+            && !texts.contains { $0.hasPrefix("Today") }
+        guard let title = texts.first, !otherDay,
               let range = texts.lazy.compactMap(parseRange).first else { continue }
         let joinable = find(it, limit: 200, { isPressable($0) && role($0) == "AXButton" && labelMatches($0, "^Join") }) != nil
         out.append(["title": title, "start": range.0, "end": range.1, "joinable": joinable])

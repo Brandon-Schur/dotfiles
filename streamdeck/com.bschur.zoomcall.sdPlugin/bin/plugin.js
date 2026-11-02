@@ -80,7 +80,11 @@ ws.on("message", (raw) => {
       devices.delete(msg.device);
       break;
     case "keyDown":
-      onKeyDown(msg).catch((e) => log("keyDown error", String(e)));
+      if (msg.action === A + "slackdnd") slackKeyDown(msg);
+      else onKeyDown(msg).catch((e) => log("keyDown error", String(e)));
+      break;
+    case "keyUp":
+      if (msg.action === A + "slackdnd") slackKeyUp(msg);
       break;
     case "willAppear":
       visible.set(msg.context, {
@@ -110,6 +114,7 @@ function switchProfile(device, profile, page) {
 
 // ---------- meeting detection ----------
 let inMeeting = false;
+let callStartedAt = null; // ms epoch; from Zoom's connected time, else when we detected the call
 let positives = 0;
 let negatives = 0;
 let polling = false;
@@ -131,6 +136,10 @@ async function detectMeeting() {
   const status = await run(ZOOMCTL, ["status"]);
   try {
     const s = JSON.parse(status.stdout);
+    if (s.meetingWindow && Number.isFinite(s.connectedSeconds)) {
+      callStartedAt = Date.now() - s.connectedSeconds * 1000; // Zoom's own connected time (shown only sometimes)
+      if (inMeeting) state.callStartedAt = callStartedAt;
+    }
     if (s.meetingWindow) return { meeting: true, why: "meeting window" };
   } catch {
     /* fall through to socket check */
@@ -149,6 +158,11 @@ async function pollMeeting() {
       positives++;
       if (!inMeeting && positives >= ENTER_AFTER) {
         inMeeting = true;
+        // Reuse a saved start if Stream Deck restarted mid-call (saved < 8h ago and never ended).
+        const saved = state.callStartedAt;
+        if (!callStartedAt) callStartedAt = saved && Date.now() - saved < 8 * 3600e3 ? saved : Date.now() - (ENTER_AFTER - 1) * POLL_MS;
+        state.callStartedAt = callStartedAt;
+        saveState();
         log("meeting started", why);
         for (const d of devices) switchProfile(d, PROFILE, 0);
         renderNextMeeting();
@@ -158,6 +172,9 @@ async function pollMeeting() {
       negatives++;
       if (inMeeting && negatives >= EXIT_AFTER) {
         inMeeting = false;
+        callStartedAt = null;
+        delete state.callStartedAt;
+        saveState();
         log("meeting ended", why);
         // Only switch back devices still on the call profile (not ones sent Home manually).
         for (const d of devices) if (onCall.has(d)) switchProfile(d); // previously active profile
@@ -280,6 +297,7 @@ function refreshSoon() {
     renderSlackDnd();
     renderPlaylists();
     renderSongs();
+    renderCallKeys();
   }, 300);
 }
 
@@ -530,15 +548,22 @@ async function pressDnd(context) {
 let slackPause = { state: "idle" }; // idle | paused | error
 
 function renderSlackDnd() {
+  // Focus mode wins: pausing turns it off, and Slack may also report it as "snoozed".
   for (const [ctx] of contextsFor("slackdnd")) {
-    if (slackPause.state === "error") setKey(ctx, ["text", "🍅 ⚠️", "Couldn't set Slack status", "#7a2e2e"]);
-    else if (slackPause.state === "paused") setKey(ctx, ["text", "🍅 On", "Do not disturb (VIPs ok)", "#b3261e"]);
-    else setKey(ctx, ["text", "🍅 Off", "Press: Do not disturb", "#2d3a46"]);
+    if (slackPause.state === "error") setKey(ctx, ["text", "🍅 ⚠", "Couldn't change Slack", "#7a2e2e"]);
+    else if (slackPause.state === "busy") setKey(ctx, ["text", "🍅 …", "Updating Slack", "#2d3a46"]);
+    else if (slackState.focus) setKey(ctx, ["text", "🔭 On", "Focus · tap for DnD", "#5b3fa8"]);
+    else if (slackPause.state === "paused") setKey(ctx, ["text", "🍅 On", "DnD · hold for focus", "#b3261e"]);
+    else setKey(ctx, ["text", "🍅 Off", "Tap DnD · hold focus", "#2d3a46"]);
   }
 }
 
 async function pressSlackDnd(settings, context) {
-  const r = await run(ZOOMCTL, ["slack-status-dnd", "toggle", settings.status || "Focus", settings.emoji || "tomato"], 20000);
+  // Explicit target: "toggle" misreads focus mode (which also shows as snoozed) as DnD on.
+  const target = slackState.focus || slackPause.state !== "paused" ? "on" : "off";
+  slackPause = { state: "busy" };
+  renderSlackDnd();
+  const r = await run(ZOOMCTL, ["slack-status-dnd", target, settings.status || "Focus", settings.emoji || "tomato"], 20000);
   const out = r.stdout.trim().split("\n").pop();
   if (r.code === 0) slackPause = { state: out === "on" ? "paused" : "idle" };
   else {
@@ -851,4 +876,53 @@ tell application "Spotify" to play track "${t.uri}" in context "${songs.context}
   if (onCall.has(device) && !inMeeting) switchProfile(device); // back to the home page
   aerospaceRestore(before);
   setTimeout(() => refreshSpotify(true), 1500);
+}
+
+// --- Call timer + clock (Zoom Call page center column) ---
+function fmtDuration(ms) {
+  const t = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), sec = t % 60;
+  return h ? `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}` : `${m}:${String(sec).padStart(2, "0")}`;
+}
+
+function renderCallKeys() {
+  for (const [ctx] of contextsFor("calltimer")) {
+    const live = inMeeting && callStartedAt;
+    setKey(ctx, ["text", live ? fmtDuration(Date.now() - callStartedAt) : "–:––", live ? "on call" : "not in a call", "#000000"]);
+  }
+  const clocks = contextsFor("clock");
+  if (clocks.length) {
+    const d = new Date();
+    const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).replace(/\s?[AP]M$/, "");
+    const sub = `${d.toLocaleTimeString("en-US", { hour: "numeric" }).slice(-2)} · ${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+    for (const [ctx] of clocks) setKey(ctx, ["text", time, sub, "#000000"]);
+  }
+}
+setInterval(renderCallKeys, 1000);
+
+// --- Slack key: tap = Do Not Disturb, hold (>= 500 ms) = focus mode ---
+const HOLD_MS = 500;
+const slackHolds = new Map(); // context -> { timer, fired }
+
+function slackKeyDown(msg) {
+  const ctx = msg.context;
+  const h = { fired: false };
+  h.timer = setTimeout(async () => {
+    h.fired = true;
+    slackPause = { state: "busy" };
+    renderSlackDnd();
+    await pressDnd(ctx); // Slack's focus-mode button
+    slackPause = { state: "idle" };
+    await refreshSlack();
+  }, HOLD_MS);
+  slackHolds.set(ctx, h);
+}
+
+function slackKeyUp(msg) {
+  const h = slackHolds.get(msg.context);
+  slackHolds.delete(msg.context);
+  if (!h || h.fired) return;
+  clearTimeout(h.timer);
+  const s = (msg.payload && msg.payload.settings) || {};
+  pressSlackDnd(s, msg.context).catch((e) => log("slack dnd error", String(e)));
 }

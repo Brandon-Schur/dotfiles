@@ -13,7 +13,7 @@ Accessibility API by a small Swift helper, `zoomctl`.
 
 **Home page** (the Default Profile's main page):
 
-| Slack | Outlook | Next meeting | Slack focus 🔭 | Slack DnD 🍅 |
+| Slack | Outlook | Next meeting | Slack DnD 🍅 (hold: focus 🔭) | 🕘 Clock |
 |---|---|---|---|---|
 | Album art | Album art | ⏮ | ⏯ | ⏭ |
 | Album art | Album art | 🔀 | 🎵 Playlists | 🎶 Songs |
@@ -22,8 +22,8 @@ Accessibility API by a small Swift helper, `zoomctl`.
 
 | Share | Raise Hand | Mute | Video | Leave |
 |---|---|---|---|---|
-| 👍 | 👏 | ❤️ | 😂 | 🎉 |
-| 🔥 | 👀 | 🙌 | 🏠 Home | More ▸ |
+| 👍 | 👏 | ⏱ Call timer | 😂 | 🎉 |
+| 🔥 | 🙌 | 🕘 Clock | 🏠 Home | More ▸ |
 
 **More page:** 🐱 `:gr_meow_thinking:`, 😮, 💯 / Record, Chat, Participants / 🏠 Home, ◀ Back.
 
@@ -40,14 +40,15 @@ home page; during a meeting, Back returns to the call page instead.
 |---|---|
 | Slack / Outlook badges | Read the Dock badge with `lsappinfo info -only StatusLabel <App>` (no permissions). Slack shows the badge total (DMs + mentions) plus a blue **DM n** pill read from Slack's "DMs, N unread" label. Outlook shows mail that's new since you last pressed the key, with the total underneath. Pressing opens the app. |
 | Next meeting | Parses today's events from Zoom Workplace's calendar side panel. Countdown turns amber at 15 min and green at 5 min or once Zoom offers **Join**; pressing joins. Skips holds and all-day entries. During a meeting it shows **📞 Call** and takes you back to the call page. |
-| Slack focus 🔭 | Presses Slack's own "Turn on / Exit focus mode" button. |
-| Slack DnD 🍅 | **On:** turns focus mode off, picks the recent status "🍅 Focus", ticks "Pause notifications until status is cleared" (VIPs still get through), saves. **Off:** clears the status and resumes notifications. State is read from Slack every 5 s. |
+| Slack DnD 🍅 / focus 🔭 | **Tap:** Do Not Disturb. On: turns focus mode off, picks the recent status "🍅 Focus", ticks "Pause notifications until status is cleared" (VIPs still get through), saves. Off: clears the status and resumes notifications. **Hold ≥ 0.5 s:** presses Slack's own "Turn on / Exit focus mode" button. The key shows 🍅 On (red), 🔭 On (purple) or 🍅 Off; state is read from Slack every 5 s. Focus mode also reports notifications as snoozed, so a tap always sends an explicit on/off. |
+| Clock | Time and date; same key as on the Zoom Call page. |
 | Album art | The current Spotify cover split across a 2×2 block, with track and artist. Pressing opens Spotify. |
 | ⏮ ⏯ ⏭ 🔀 | Elgato's Spotify plugin. |
 | Playlists | Once logged in to the Spotify Web API (see below), the picker shows Liked Songs, then **your library's playlists, most recently played first** (from your last 50 plays), refreshed when the picker opens. Before login it falls back to `src/playlists.json`. Plays via AppleScript `play track "spotify:playlist:<id>"` (Liked Songs: `spotify:user:<user id>:collection`). Covers come from Spotify's public oEmbed endpoint; no login. Spotify grabs focus when it starts playing, which makes [AeroSpace](https://github.com/nikitabobko/AeroSpace) jump a monitor to Spotify's workspace; the plugin snapshots each monitor's visible workspace before playing and switches them back afterwards (one `aerospace eval` call). |
 | Songs | `spotify-api.js context` reads what's playing; `tracks <uri> <offset> 12` loads one page at a time (album covers cached). A pick runs AppleScript `play track "<track>" in context "<playlist>"`, then restores AeroSpace workspaces like the playlist keys. |
-| Zoom call keys | Mute, Video, Share, Leave, Record, Raise Hand and 👍👏❤️😂🎉😮 use Elgato's Zoom plugin. |
-| Extra reactions | 🔥 👀 🙌 💯 and custom emoji drive Zoom's **React → More reactions** picker: search by shortcode, click the result (~1–2 s). |
+| Zoom call keys | Mute, Video, Share, Leave, Record, Raise Hand and 👍👏😂🎉😮 use Elgato's Zoom plugin. |
+| Call timer / Clock | Timer counts from when the call was detected (or Zoom's own "connected time" when its header shows it); the start is saved in `logs/state.json` so it survives a Stream Deck restart. Clock shows the time and date. |
+| Extra reactions | 🔥 🙌 💯 and custom emoji drive Zoom's **React → More reactions** picker: search by shortcode, click the result (~1–2 s). |
 | Chat / Participants | Zoom's **View → Show/Hide** menu items. |
 | Home / Back | Leaves the plugin's profile and returns to the previously active (home) profile. |
 
