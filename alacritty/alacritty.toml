@@ -1,0 +1,23 @@
+# ~/.config/alacritty/alacritty.toml — shared by macOS and Linux.
+# scripts/install-alacritty.sh links this file, the theme, and keys-os.toml
+# (-> keys-macos.toml or keys-linux.toml) into ~/.config/alacritty/.
+
+[general]
+import = [
+  "~/.config/alacritty/bschur_custom.toml",
+  # OS-specific key bindings so the Mac "Cmd" key position works the same on
+  # Linux, where keyd turns that key into Super (see scripts/install-keyboard.sh).
+  "~/.config/alacritty/keys-os.toml",
+]
+live_config_reload = true
+
+[font.normal]
+family = "JetBrainsMono Nerd Font"
+
+[selection]
+save_to_clipboard = true
+
+[[keyboard.bindings]]
+key = "L"
+mods = "Control|Alt"
+chars = "\u001b[1;7L"

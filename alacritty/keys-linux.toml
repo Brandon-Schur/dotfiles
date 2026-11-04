@@ -1,0 +1,108 @@
+# Linux key bindings: Alacritty's macOS Cmd defaults, moved onto Super.
+#
+# keyd (scripts/install-keyboard.sh) makes the key in the Mac's Cmd position
+# send Super on Linux, so these keep Cmd+C, Cmd+V, etc. under the same finger.
+# Alacritty's Linux defaults (Ctrl+Shift+C/V, ...) still work alongside them.
+#
+# Your desktop sees Super first. If one of these does nothing, the desktop has
+# that shortcut (GNOME uses Super+V for the notification list, for example);
+# unbind it there.
+#
+# Left out on purpose: tabs (Alacritty has no tabs on Linux) and Hide.
+
+# Clipboard
+[[keyboard.bindings]]
+key = "C"
+mods = "Super"
+action = "Copy"
+
+[[keyboard.bindings]]
+key = "C"
+mods = "Super"
+mode = "Vi|~Search"
+action = "ClearSelection"
+
+[[keyboard.bindings]]
+key = "V"
+mods = "Super"
+mode = "~Vi"
+action = "Paste"
+
+[[keyboard.bindings]]
+key = "V"
+mods = "Super"
+mode = "Vi|Search"
+action = "Paste"
+
+# Clear screen and scrollback
+[[keyboard.bindings]]
+key = "K"
+mods = "Super"
+mode = "~Vi|~Search"
+chars = "\f"
+
+[[keyboard.bindings]]
+key = "K"
+mods = "Super"
+mode = "~Vi|~Search"
+action = "ClearHistory"
+
+# Font size
+[[keyboard.bindings]]
+key = "0"
+mods = "Super"
+action = "ResetFontSize"
+
+[[keyboard.bindings]]
+key = "="
+mods = "Super"
+action = "IncreaseFontSize"
+
+[[keyboard.bindings]]
+key = "+"
+mods = "Super"
+action = "IncreaseFontSize"
+
+[[keyboard.bindings]]
+key = "-"
+mods = "Super"
+action = "DecreaseFontSize"
+
+# Search
+[[keyboard.bindings]]
+key = "F"
+mods = "Super"
+mode = "~Search"
+action = "SearchForward"
+
+[[keyboard.bindings]]
+key = "B"
+mods = "Super"
+mode = "~Search"
+action = "SearchBackward"
+
+# Windows
+[[keyboard.bindings]]
+key = "N"
+mods = "Super"
+action = "CreateNewWindow"
+
+[[keyboard.bindings]]
+key = "F"
+mods = "Super|Control"
+action = "ToggleFullscreen"
+
+[[keyboard.bindings]]
+key = "M"
+mods = "Super"
+action = "Minimize"
+
+[[keyboard.bindings]]
+key = "Q"
+mods = "Super"
+action = "Quit"
+
+[[keyboard.bindings]]
+key = "W"
+mods = "Super"
+action = "Quit"

@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# install.sh — install dependencies + link configs (tmux + nvim).
+# install.sh — install dependencies + link configs (tmux, nvim, Alacritty) and,
+# on Linux, translate the Karabiner key remaps to keyd.
 #
 # Usage:
-#   bash install.sh                 # install deps, then tmux + nvim configs
+#   bash install.sh                 # deps, tmux, nvim, Alacritty, keyboard remap
 #   bash install.sh --no-deps       # skip dependency installation (configs only)
+#   bash install.sh --no-keyboard   # skip the Linux keyd remap (it needs sudo)
 #   bash install.sh --tmux-only     # deps + tmux config + sesh picker only
 #   bash install.sh --nvim-only     # deps + nvim config only
 #
@@ -17,13 +19,16 @@ DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DO_DEPS=true
 DO_TMUX=true
 DO_NVIM=true
+DO_ALACRITTY=true
+DO_KEYBOARD=true
 # The sesh picker is tmux-only, so it follows DO_TMUX rather than getting its own flag.
 
 for arg in "$@"; do
   case "$arg" in
-    --no-deps)   DO_DEPS=false ;;
-    --tmux-only) DO_NVIM=false ;;
-    --nvim-only) DO_TMUX=false ;;
+    --no-deps)     DO_DEPS=false ;;
+    --no-keyboard) DO_KEYBOARD=false ;;
+    --tmux-only)   DO_NVIM=false; DO_ALACRITTY=false; DO_KEYBOARD=false ;;
+    --nvim-only)   DO_TMUX=false; DO_ALACRITTY=false; DO_KEYBOARD=false ;;
   esac
 done
 
@@ -71,6 +76,21 @@ if $DO_NVIM; then
   echo ""
   echo "--- Installing Neovim config ---"
   bash "$DOTFILES_DIR/scripts/install-nvim.sh"
+fi
+
+if $DO_ALACRITTY; then
+  echo ""
+  echo "--- Installing Alacritty config ---"
+  bash "$DOTFILES_DIR/scripts/install-alacritty.sh"
+fi
+
+# Linux only (the script exits early on macOS, where Karabiner does this).
+# Non-fatal: the configs above are still usable without the remap.
+if $DO_KEYBOARD && [ "$OS" = "Linux" ]; then
+  echo ""
+  echo "--- Translating Karabiner key remaps to keyd ---"
+  bash "$DOTFILES_DIR/scripts/install-keyboard.sh" || \
+    echo "  [!] keyboard remap skipped — see scripts/install-keyboard.sh output above"
 fi
 
 echo ""

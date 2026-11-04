@@ -14,6 +14,8 @@ macOS audio routing.
 | **tmux** | Custom colorscheme over catppuccin v2 status layout |
 | **sesh picker** | fzf session picker on `prefix s` — sessions ordered by last use, with a metrics table |
 | **Neovim** | AstroNvim v5 with custom colorscheme, git tools, LSP, and formatters |
+| **Alacritty** | Shared config + theme, with OS-specific key bindings (`keys-macos.toml` / `keys-linux.toml`) |
+| **keyboard** | `karabiner/karabiner.json` remaps keys on macOS; on Linux the installer translates it to [keyd](https://github.com/rvaiya/keyd) so the same physical keys do the same thing. See [Same keys on macOS and Linux](#same-keys-on-macos-and-linux) |
 | **Obsidian** | `obsidian/bschur_custom.css` — CSS snippet that applies the custom palette over the Minimal theme. Copy to `<vault>/.obsidian/snippets/` and enable under Settings → Appearance → CSS snippets |
 | **audio-priority** (macOS) | Picks the default speaker/mic by priority as devices come and go, and feeds Loopback's Meeting Capture (all system audio + current mic) for a transcription app. Installed separately; see [`audio-priority/README.md`](audio-priority/README.md) |
 | **streamdeck** (macOS) | Custom Stream Deck plugin: notification badges, Spotify art and playlist picker, Slack DnD, and Zoom call controls that switch in automatically during meetings. See [`streamdeck/README.md`](streamdeck/README.md) |
@@ -154,12 +156,14 @@ bash ~/dotfiles/install.sh
 3. Install formatters: prettier, sql-formatter
 4. Install language runtimes: python, node, openjdk, llvm/clang
 5. Install the JetBrainsMono Nerd Font
-6. Link the tmux + Neovim + lazygit configs
+6. Link the tmux + Neovim + lazygit + Alacritty configs
 7. Install tmux plugins (TPM)
+8. Linux only: translate `karabiner.json` to keyd and install keyd (needs sudo)
 
 Flags:
 ```bash
 bash ~/dotfiles/install.sh --no-deps     # link configs only, skip dependency install
+bash ~/dotfiles/install.sh --no-keyboard # skip the Linux keyd remap
 bash ~/dotfiles/install.sh --nvim-only   # deps + Neovim config only
 bash ~/dotfiles/install.sh --tmux-only   # deps + tmux config only
 ```
@@ -195,6 +199,39 @@ Then set **JetBrainsMono Nerd Font** in Windows Terminal settings.
 wsl --install
 # Reboot if prompted, open Ubuntu, then run the macOS/Linux one-liner above.
 ```
+
+### Same keys on macOS and Linux
+
+On the Mac, Karabiner-Elements remaps keys per keyboard (`karabiner/karabiner.json`).
+Linux has no Karabiner, so the same keyboard sends different modifiers and tmux,
+the shell, and Alacritty shortcuts land on the wrong keys.
+`scripts/install-keyboard.sh` fixes this on Linux. It runs
+`keyboard/karabiner-to-keyd.py` to turn each Karabiner device block into a keyd
+config in `/etc/keyd/dotfiles-*.conf`, installs keyd (distro package, or v2.6.0
+from source), and reloads it. keyd works below X11/Wayland, so the remap applies
+in every app and on the console.
+
+| Physical key (PC keyboard) | macOS (Karabiner) | Linux (keyd) |
+|---|---|---|
+| Alt, next to space | Control | Control |
+| Windows key | Option | Alt |
+| Ctrl, in the corner | Command | Super |
+| Caps Lock / Escape | swapped | swapped |
+| F10-F12 (listed keyboards) | media keys | media keys |
+
+- Keyboards listed by vendor/product id in `karabiner.json` translate literally.
+- Any other keyboard (such as a laptop's built-in one) is assumed to be PC layout.
+  Karabiner's catch-all block, written for the MacBook keyboard, is translated
+  by key position, so the key next to space is still Control.
+- Apple keyboards on Linux (vendor `05ac`) get the catch-all block as written.
+- Alacritty's macOS defaults use Cmd. `alacritty/keys-linux.toml` binds the same
+  actions to Super (Super+C/V copy/paste, Super+K clear, Super+N new window,
+  font size, search), so they stay under the same finger. If one does nothing,
+  your desktop has claimed that Super shortcut; unbind it there.
+
+After editing `karabiner.json` on the Mac, re-run `bash scripts/install-keyboard.sh`
+on Linux. Check what a key sends with `sudo keyd monitor`. If a bad config ever
+locks the keyboard, press **Backspace + Escape + Enter** together to stop keyd.
 
 ### macOS audio (audio-priority)
 

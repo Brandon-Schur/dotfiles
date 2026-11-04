@@ -1,0 +1,3 @@
+# macOS key bindings. Empty on purpose: Alacritty's built-in macOS defaults
+# already bind Cmd+C/V/K/N/F/Q, font size, and tabs. keys-linux.toml copies
+# those defaults onto Super so the same physical key works on Linux.
