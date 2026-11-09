@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# install.sh — install dependencies + link configs (tmux, nvim, Alacritty) and,
+# install.sh — install dependencies + link configs (tmux, nvim, Ghostty) and,
 # on Linux, translate the Karabiner key remaps to keyd.
 #
 # Usage:
-#   bash install.sh                 # deps, tmux, nvim, Alacritty, keyboard remap
+#   bash install.sh                 # deps, tmux, nvim, Ghostty, keyboard remap
 #   bash install.sh --no-deps       # skip dependency installation (configs only)
 #   bash install.sh --no-keyboard   # skip the Linux keyd remap (it needs sudo)
 #   bash install.sh --tmux-only     # deps + tmux config + sesh picker only
@@ -19,7 +19,7 @@ DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DO_DEPS=true
 DO_TMUX=true
 DO_NVIM=true
-DO_ALACRITTY=true
+DO_GHOSTTY=true
 DO_KEYBOARD=true
 # The sesh picker is tmux-only, so it follows DO_TMUX rather than getting its own flag.
 
@@ -27,8 +27,8 @@ for arg in "$@"; do
   case "$arg" in
     --no-deps)     DO_DEPS=false ;;
     --no-keyboard) DO_KEYBOARD=false ;;
-    --tmux-only)   DO_NVIM=false; DO_ALACRITTY=false; DO_KEYBOARD=false ;;
-    --nvim-only)   DO_TMUX=false; DO_ALACRITTY=false; DO_KEYBOARD=false ;;
+    --tmux-only)   DO_NVIM=false; DO_GHOSTTY=false; DO_KEYBOARD=false ;;
+    --nvim-only)   DO_TMUX=false; DO_GHOSTTY=false; DO_KEYBOARD=false ;;
   esac
 done
 
@@ -78,10 +78,10 @@ if $DO_NVIM; then
   bash "$DOTFILES_DIR/scripts/install-nvim.sh"
 fi
 
-if $DO_ALACRITTY; then
+if $DO_GHOSTTY; then
   echo ""
-  echo "--- Installing Alacritty config ---"
-  bash "$DOTFILES_DIR/scripts/install-alacritty.sh"
+  echo "--- Installing Ghostty config ---"
+  bash "$DOTFILES_DIR/scripts/install-ghostty.sh"
 fi
 
 # Linux only (the script exits early on macOS, where Karabiner does this).

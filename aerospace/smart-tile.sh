@@ -33,7 +33,7 @@ SKIP_WS="9"
 SKIP_APP="us.zoom.xos"
 
 # Let earlier/later on-window-detected rules (move-node-to-workspace, the
-# async Alacritty first-window move) finish placing the window.
+# async Ghostty first-window move) finish placing the window.
 sleep 0.3
 
 WS="$1"

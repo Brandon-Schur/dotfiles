@@ -8,7 +8,7 @@
 #                 (used by SketchyBar's display_change hook).
 #   no args       always apply (alt-shift-p).
 #
-# Alacritty: only moved when exactly one terminal is open (extra terminals
+# Ghostty: only moved when exactly one terminal is open (extra terminals
 # stay where you put them). Zoom meeting windows follow the "meeting" role.
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -32,11 +32,11 @@ echo "$PROFILE" > "$STATE"
 
 move() { "$AEROSPACE" move-node-to-workspace --window-id "$1" "$2" >/dev/null 2>&1; }
 
-for role in slack vivaldi dashboard outlook spotify alacritty; do
+for role in slack vivaldi dashboard outlook spotify ghostty; do
     ws=$(ws_for "$role" "$PROFILE")
     app=$(app_for "$role")
     ids=($("$AEROSPACE" list-windows --monitor all --app-bundle-id "$app" --format '%{window-id}' 2>/dev/null))
-    [ "$role" = alacritty ] && [ "${#ids[@]}" -ne 1 ] && continue
+    [ "$role" = ghostty ] && [ "${#ids[@]}" -ne 1 ] && continue
     for id in "${ids[@]}"; do move "$id" "$ws"; done
 done
 

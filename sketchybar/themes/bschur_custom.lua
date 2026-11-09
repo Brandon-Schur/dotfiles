@@ -1,5 +1,5 @@
 -- bschur_custom (dark theme)
--- Same palette as alacritty/bschur_custom.toml and the nvim/tmux/Obsidian themes
+-- Same palette as ghostty/themes/bschur_custom and the nvim/tmux/Obsidian themes
 return {
   peach = 0xfff0a35e,
   mauve = 0xffb48ef0,

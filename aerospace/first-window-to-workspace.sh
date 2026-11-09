@@ -3,9 +3,9 @@
 #
 # Usage: first-window-to-workspace.sh <app-bundle-id> <workspace-or-role>
 #   The second arg is a workspace number, or a role name from workspaces.sh
-#   (e.g. "alacritty") resolved for the current laptop/desk profile.
+#   (e.g. "ghostty") resolved for the current laptop/desk profile.
 #
-# Used for Alacritty: the first terminal belongs on its home workspace, but
+# Used for Ghostty: the first terminal belongs on its home workspace, but
 # extra terminals opened later (alt-shift-enter) should stay on whatever
 # workspace they were opened from. Called via exec-and-forget from
 # on-window-detected. When the app has exactly one window, that window is the

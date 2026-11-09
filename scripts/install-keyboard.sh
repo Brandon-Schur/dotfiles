@@ -10,8 +10,8 @@
 # Result on Linux, for the PC keyboards in karabiner.json and any unlisted one:
 #   key next to space (Alt)  -> Control   (tmux prefix C-a, shell C-r, ...)
 #   Windows key              -> Alt       (what Option is on the Mac)
-#   corner Ctrl key          -> Super     (what Cmd is on the Mac; Alacritty's
-#                                          keys-linux.toml binds Super+C/V/etc.)
+#   corner Ctrl key          -> Super     (what Cmd is on the Mac; Ghostty's
+#                                          keys-linux.ghostty binds Super+C/V/etc.)
 #   Caps Lock <-> Escape, plus the per-keyboard F10-F12 media keys.
 #
 # Re-run after editing karabiner.json. Needs sudo.

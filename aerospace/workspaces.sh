@@ -9,8 +9,8 @@
 #   ---+---------------------+-------------
 #    1 | Slack               | Slack
 #    2 | Vivaldi             | Vivaldi + Zoom meeting
-#    3 | Alacritty           | Dashboard
-#    4 | Zoom meeting        | Alacritty
+#    3 | Ghostty             | Dashboard
+#    4 | Zoom meeting        | Ghostty
 #    5 | Dashboard           | Outlook
 #    6 | Outlook             | -
 #    7 | Spotify             | -
@@ -31,7 +31,7 @@ ws_for() {
     case "$profile:$role" in
         desk:slack)       echo 1 ;;
         desk:vivaldi)     echo 2 ;;
-        desk:alacritty)   echo 3 ;;
+        desk:ghostty)     echo 3 ;;
         desk:meeting)     echo 4 ;;
         desk:dashboard)   echo 5 ;;
         desk:outlook)     echo 6 ;;
@@ -41,7 +41,7 @@ ws_for() {
         laptop:slack)     echo 1 ;;
         laptop:vivaldi)   echo 2 ;;
         laptop:dashboard) echo 3 ;;
-        laptop:alacritty) echo 4 ;;
+        laptop:ghostty)   echo 4 ;;
         laptop:outlook)   echo 5 ;;
         laptop:meeting)   echo 2 ;;
         laptop:spotify)   echo 8 ;;
@@ -55,7 +55,7 @@ app_for() {
         slack)     echo com.tinyspeck.slackmacgap ;;
         vivaldi)   echo com.vivaldi.Vivaldi ;;
         dashboard) echo com.vivaldi.Vivaldi.app.mcijphhnflbofdapglafogoladjmgfge ;;
-        alacritty) echo org.alacritty ;;
+        ghostty)   echo com.mitchellh.ghostty ;;
         outlook)   echo com.microsoft.Outlook ;;
         spotify)   echo com.spotify.client ;;
     esac

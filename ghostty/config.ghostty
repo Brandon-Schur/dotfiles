@@ -1,0 +1,25 @@
+# Ghostty config, shared by macOS and Linux.
+# Source: ~/dotfiles/ghostty. scripts/install-ghostty.sh links this file, the
+# theme, and (Linux only) keys-os.ghostty -> keys-linux.ghostty.
+# Reload: Cmd+Shift+,
+
+theme = bschur_custom
+font-family = JetBrainsMono Nerd Font Mono
+
+# party-hud HP/SP bars are drawn with underlines
+adjust-underline-position = 2
+adjust-underline-thickness = 3
+
+# Copy the selection to the clipboard as soon as it's made
+copy-on-select = clipboard
+
+# Copy xterm-ghostty terminfo to hosts on first ssh from Ghostty
+shell-integration-features = ssh-terminfo
+
+# Ctrl+Alt+L sends ESC[1;7L
+keybind = ctrl+alt+l=text:\x1b[1;7L
+
+# OS-specific key bindings so the Mac "Cmd" key position works the same on
+# Linux, where keyd turns that key into Super (see scripts/install-keyboard.sh).
+# Optional (?): absent on macOS, where Ghostty's defaults already use Cmd.
+config-file = ?keys-os.ghostty

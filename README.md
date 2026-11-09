@@ -3,7 +3,7 @@
 Personal terminal and editor configuration — **tmux** + **Neovim** (AstroNvim) — plus
 macOS audio routing.
 
-**Theme:** Custom colorscheme across tmux, Neovim, Alacritty, and Obsidian.
+**Theme:** Custom colorscheme across tmux, Neovim, Ghostty, and Obsidian.
 
 ---
 
@@ -14,7 +14,7 @@ macOS audio routing.
 | **tmux** | Custom colorscheme over catppuccin v2 status layout |
 | **sesh picker** | fzf session picker on `prefix s` — sessions ordered by last use, with a metrics table |
 | **Neovim** | AstroNvim v5 with custom colorscheme, git tools, LSP, and formatters |
-| **Alacritty** | Shared config + theme, with OS-specific key bindings (`keys-macos.toml` / `keys-linux.toml`) |
+| **Ghostty** | Shared config + theme. On Linux, `keys-linux.ghostty` adds Super key bindings to match the Mac. (The old `alacritty/` config is kept but no longer installed.) |
 | **keyboard** | `karabiner/karabiner.json` remaps keys on macOS; on Linux the installer translates it to [keyd](https://github.com/rvaiya/keyd) so the same physical keys do the same thing. See [Same keys on macOS and Linux](#same-keys-on-macos-and-linux) |
 | **Obsidian** | `obsidian/bschur_custom.css` — CSS snippet that applies the custom palette over the Minimal theme. Copy to `<vault>/.obsidian/snippets/` and enable under Settings → Appearance → CSS snippets |
 | **audio-priority** (macOS) | Picks the default speaker/mic by priority as devices come and go, and feeds Loopback's Meeting Capture (all system audio + current mic) for a transcription app. Installed separately; see [`audio-priority/README.md`](audio-priority/README.md) |
@@ -156,7 +156,7 @@ bash ~/dotfiles/install.sh
 3. Install formatters: prettier, sql-formatter
 4. Install language runtimes: python, node, openjdk, llvm/clang
 5. Install the JetBrainsMono Nerd Font
-6. Link the tmux + Neovim + lazygit + Alacritty configs
+6. Link the tmux + Neovim + lazygit + Ghostty configs
 7. Install tmux plugins (TPM)
 8. Linux only: translate `karabiner.json` to keyd and install keyd (needs sudo)
 
@@ -204,7 +204,7 @@ wsl --install
 
 On the Mac, Karabiner-Elements remaps keys per keyboard (`karabiner/karabiner.json`).
 Linux has no Karabiner, so the same keyboard sends different modifiers and tmux,
-the shell, and Alacritty shortcuts land on the wrong keys.
+the shell, and Ghostty shortcuts land on the wrong keys.
 `scripts/install-keyboard.sh` fixes this on Linux. It runs
 `keyboard/karabiner-to-keyd.py` to turn each Karabiner device block into a keyd
 config in `/etc/keyd/dotfiles-*.conf`, installs keyd (distro package, or v2.6.0
@@ -224,9 +224,9 @@ in every app and on the console.
   Karabiner's catch-all block, written for the MacBook keyboard, is translated
   by key position, so the key next to space is still Control.
 - Apple keyboards on Linux (vendor `05ac`) get the catch-all block as written.
-- Alacritty's macOS defaults use Cmd. `alacritty/keys-linux.toml` binds the same
+- Ghostty's macOS defaults use Cmd. `ghostty/keys-linux.ghostty` binds the same
   actions to Super (Super+C/V copy/paste, Super+K clear, Super+N new window,
-  font size, search), so they stay under the same finger. If one does nothing,
+  Super+T new tab, font size, search), so they stay under the same finger. If one does nothing,
   your desktop has claimed that Super shortcut; unbind it there.
 
 After editing `karabiner.json` on the Mac, re-run `bash scripts/install-keyboard.sh`
@@ -445,13 +445,13 @@ Available: `tokyonight-storm`, `tokyonight-night`, `tokyonight-moon`, `tokyonigh
 
 ### tmux clipboard (OSC 52)
 
-The tmux config includes:
+The tmux config sets `set-clipboard on`, so copies inside tmux reach the system
+clipboard over OSC 52. Ghostty reports `TERM=xterm-ghostty`, and tmux already
+enables OSC 52 for `xterm*` terminals, so no extra line is needed. For a terminal
+whose `TERM` doesn't start with `xterm`, add:
 ```tmux
-set -as terminal-features ",alacritty:clipboard"
+set -as terminal-features ",<your-TERM>:clipboard"
 ```
-This enables OSC 52 clipboard passthrough specifically for Alacritty. Change
-`alacritty` to match your terminal if different (e.g. `xterm-256color`, `kitty`,
-`wezterm`). Most modern terminals support OSC 52 by default and may not need this line.
 
 ### Project root markers (vim-rooter)
 

@@ -10,7 +10,7 @@
 -- still works via the terminal's normal paste key).
 --
 -- On macOS/Linux without tmux: OSC 52 is supported by most modern terminals
--- (Alacritty, Kitty, WezTerm, iTerm2, Windows Terminal). If it causes issues
+-- (Ghostty, Kitty, WezTerm, iTerm2, Windows Terminal). If it causes issues
 -- on your terminal, remove this file — Neovim will fall back to pbcopy/xclip.
 
 ---@type LazySpec

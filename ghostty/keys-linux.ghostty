@@ -1,0 +1,39 @@
+# Linux key bindings: Ghostty's macOS Cmd defaults, moved onto Super.
+#
+# keyd (scripts/install-keyboard.sh) makes the key in the Mac's Cmd position
+# send Super on Linux, so these keep Cmd+C, Cmd+V, etc. under the same finger.
+# Ghostty's Linux defaults (Ctrl+Shift+C/V, ...) still work alongside them.
+#
+# scripts/install-ghostty.sh links this file to ~/.config/ghostty/keys-os.ghostty
+# on Linux only. macOS needs nothing here: Ghostty's macOS defaults already use Cmd.
+#
+# Your desktop sees Super first. If one of these does nothing, the desktop has
+# that shortcut (GNOME uses Super+V for the notification list, for example);
+# unbind it there.
+
+# Clipboard
+keybind = super+c=copy_to_clipboard
+keybind = super+v=paste_from_clipboard
+
+# Clear screen and scrollback
+keybind = super+k=clear_screen
+
+# Font size
+keybind = super+0=reset_font_size
+keybind = super+equal=increase_font_size:1
+keybind = super+plus=increase_font_size:1
+keybind = super+minus=decrease_font_size:1
+
+# Search
+keybind = super+f=start_search
+keybind = super+g=navigate_search:next
+keybind = super+shift+g=navigate_search:previous
+
+# Windows and tabs
+keybind = super+n=new_window
+keybind = super+t=new_tab
+keybind = super+w=close_surface
+keybind = super+shift+left_bracket=previous_tab
+keybind = super+shift+right_bracket=next_tab
+keybind = super+ctrl+f=toggle_fullscreen
+keybind = super+q=quit

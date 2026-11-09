@@ -28,7 +28,7 @@ PRESET_OPTIONS = {
 
 FONT = {
   icon_font = "JetBrainsMono Nerd Font Mono",
-  label_font = "JetBrainsMono Nerd Font Mono", -- Nerd Font Mono, matches Alacritty
+  label_font = "JetBrainsMono Nerd Font Mono", -- Nerd Font Mono, matches Ghostty
   style_map = {
     ["Regular"] = "Regular",
     ["Semibold"] = "SemiBold",

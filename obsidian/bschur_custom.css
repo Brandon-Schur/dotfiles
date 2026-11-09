@@ -1,7 +1,7 @@
 /* ==========================================================================
    bschur_custom color scheme for the Minimal theme
    Source of truth: ~/dotfiles — the "bschur_custom" palette shared by
-   nvim (lua/plugins/tokyonight.lua), alacritty (bschur_custom.toml) and tmux.
+   nvim (lua/plugins/tokyonight.lua), ghostty (themes/bschur_custom) and tmux.
 
    Minimal's scheme dropdown is hardcoded, so this snippet overrides whichever
    Minimal scheme is selected. Enable/disable it under

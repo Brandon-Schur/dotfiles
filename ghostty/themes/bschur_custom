@@ -1,0 +1,30 @@
+# bschur_custom: dark palette shared with nvim, tmux, SketchyBar, Obsidian and Sharp Tabs
+background = #1e252f
+foreground = #dee3ea
+cursor-color = #dee3ea
+cursor-text = #1e252f
+selection-foreground = #dee3ea
+selection-background = #25365a
+search-foreground = #dee3ea
+search-background = #243a5e
+search-selected-foreground = #191e24
+search-selected-background = #29b5e8
+
+palette = 0=#3a4453
+palette = 1=#f76a86
+palette = 2=#34d399
+palette = 3=#fccf54
+palette = 4=#5999f8
+palette = 5=#b48ef0
+palette = 6=#29b5e8
+palette = 7=#bdc4d5
+palette = 8=#5d6a85
+palette = 9=#ff8ba3
+palette = 10=#5be0b8
+palette = 11=#ffd97a
+palette = 12=#7fb0fb
+palette = 13=#c9a9f6
+palette = 14=#5cc6ef
+palette = 15=#f4f6f9
+palette = 16=#f0a35e
+palette = 17=#e0559a

@@ -139,7 +139,7 @@ outer.top = [{ monitor."built-in" = 5 }, 0]
 
 # --- Apps & tools ------------------------------------------------------------
 
-alt-shift-enter = 'exec-and-forget open -n /Applications/Alacritty.app'
+alt-shift-enter = 'exec-and-forget open -n /Applications/Ghostty.app'
 
 # Flameshot (macOS has no global Flameshot hotkey). capture.sh first kills any
 # hung, invisible capture so the hotkey never gets stuck.
@@ -358,8 +358,8 @@ run = 'exec-and-forget /bin/bash ~/.config/aerospace/route.sh vivaldi'
 # Only the FIRST terminal goes home; extra terminals (alt-shift-enter) stay on
 # the workspace they were opened from.
 [[on-window-detected]]
-if.app-id = 'org.alacritty'
-run = 'exec-and-forget /bin/bash ~/.config/aerospace/first-window-to-workspace.sh org.alacritty alacritty'
+if.app-id = 'com.mitchellh.ghostty'
+run = 'exec-and-forget /bin/bash ~/.config/aerospace/first-window-to-workspace.sh com.mitchellh.ghostty ghostty'
 
 [[on-window-detected]]
 if.app-id = 'com.vivaldi.Vivaldi.app.mcijphhnflbofdapglafogoladjmgfge'
