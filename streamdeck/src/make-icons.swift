@@ -1,6 +1,7 @@
 // Renders Stream Deck key/action icons (emoji glyph + optional caption) to PNG.
 // Usage: swift make-icons.swift <outdir> < spec.tsv
-//   spec.tsv lines: <filename-stem>\t<size px>\t<glyph>\t<caption or empty>\t<bg hex or empty>
+//   spec.tsv lines: <filename-stem>\t<size px>\t<glyph>\t<caption or empty>\t<bg hex or empty>[\t<glyph hex>]
+//   A glyph color draws the glyph as heavy text in that color (for text keys like a green "+1").
 import AppKit
 
 let outDir = CommandLine.arguments[1]
@@ -12,7 +13,7 @@ func color(_ hex: String) -> NSColor {
                    blue: CGFloat(v & 0xff) / 255, alpha: 1)
 }
 
-func render(stem: String, size: Int, glyph: String, caption: String, bg: String) {
+func render(stem: String, size: Int, glyph: String, caption: String, bg: String, fg: String = "") {
     let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: size, pixelsHigh: size, bitsPerSample: 8,
                                samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
                                colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
@@ -25,7 +26,9 @@ func render(stem: String, size: Int, glyph: String, caption: String, bg: String)
     }
     let hasCaption = !caption.isEmpty
     let glyphSize = s * (hasCaption ? 0.50 : 0.62)
-    let g = NSAttributedString(string: glyph, attributes: [.font: NSFont.systemFont(ofSize: glyphSize)])
+    let g = NSAttributedString(string: glyph, attributes: fg.isEmpty
+        ? [.font: NSFont.systemFont(ofSize: glyphSize)]
+        : [.font: NSFont.systemFont(ofSize: glyphSize, weight: .black), .foregroundColor: color(fg)])
     let gs = g.size()
     let gy = hasCaption ? s * 0.36 : (s - gs.height) / 2
     g.draw(at: NSPoint(x: (s - gs.width) / 2, y: gy))
@@ -46,5 +49,5 @@ func render(stem: String, size: Int, glyph: String, caption: String, bg: String)
 while let line = readLine() {
     let f = line.components(separatedBy: "\t")
     guard f.count >= 3, let size = Int(f[1]) else { continue }
-    render(stem: f[0], size: size, glyph: f[2], caption: f.count > 3 ? f[3] : "", bg: f.count > 4 ? f[4] : "")
+    render(stem: f[0], size: size, glyph: f[2], caption: f.count > 3 ? f[3] : "", bg: f.count > 4 ? f[4] : "", fg: f.count > 5 ? f[5] : "")
 }

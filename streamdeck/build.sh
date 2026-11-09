@@ -31,6 +31,7 @@ spec | swift src/make-icons.swift "$P/imgs"
   printf '%s\t144\t%s\t%s\t%s\n' \
     k-chat "💬" "Chat" "$BG"  k-people "👥" "People" "$BG" \
     k-more "😀" "More ▸" "$BG"  k-back "◀️" "Back" "$BG"  k-home "🏠" "Home" "$BG"
+  printf 'e-plus\t144\t+1\t\t%s\t%s\n' "$BG" "4CB944"  # green "+1" text, matches Zoom's :plus1:
   while IFS=$'\t' read -r stem glyph cap; do printf '%s\t144\t%s\t%s\t%s\n' "$stem" "$glyph" "$cap" "$BG"; done <<'EOF'
 e-fire	🔥	
 e-100	💯	

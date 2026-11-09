@@ -163,6 +163,7 @@ async function pollMeeting() {
         if (!callStartedAt) callStartedAt = saved && Date.now() - saved < 8 * 3600e3 ? saved : Date.now() - (ENTER_AFTER - 1) * POLL_MS;
         state.callStartedAt = callStartedAt;
         saveState();
+        fetchMeetings(5 * 60e3); // for the timer's "time left" view
         log("meeting started", why);
         for (const d of devices) switchProfile(d, PROFILE, 0);
         renderNextMeeting();
@@ -206,6 +207,10 @@ async function onKeyDown({ action, context, device, payload }) {
   switch (action) {
     case A + "react":
       r = await run(ZOOMCTL, ["react", s.emoji || "👍", s.name || "thumbs up"]);
+      if (r.code !== 0 && s.fallbackEmoji && /not found in emoji search/.test(r.stderr)) {
+        log(`react ${s.emoji} failed, trying ${s.fallbackEmoji}`);
+        r = await run(ZOOMCTL, ["react", s.fallbackEmoji, s.fallbackName || s.fallbackEmoji]);
+      }
       // Extra reactions live on page 2; hop back to the main call page afterwards.
       if (r.code === 0 && s.returnToPage !== undefined) switchProfile(device, PROFILE, s.returnToPage);
       break;
@@ -217,6 +222,12 @@ async function onKeyDown({ action, context, device, payload }) {
       return;
     case A + "open":
       switchProfile(device, PROFILE, 0);
+      return;
+    case A + "calltimer":
+      state.callTimerMode = state.callTimerMode === "remaining" ? "elapsed" : "remaining";
+      saveState();
+      if (state.callTimerMode === "remaining") await fetchMeetings(5 * 60e3);
+      renderCallKeys();
       return;
     case A + "home":
       if (s.toCall && inMeeting) switchProfile(device, PROFILE, 0);
@@ -352,17 +363,20 @@ async function pressBadge(settings) {
 let meetings = [];
 let meetingsFetchedAt = 0;
 
+async function fetchMeetings(maxAgeMs = 55000) {
+  if (Date.now() - meetingsFetchedAt <= maxAgeMs) return;
+  const r = await run(ZOOMCTL, ["meetings"], 15000);
+  try {
+    meetings = JSON.parse(r.stdout);
+    meetingsFetchedAt = Date.now();
+  } catch {
+    if (r.stderr) log("meetings failed", r.stderr.trim());
+  }
+}
+
 async function refreshMeetings() {
   if (contextsFor("nextmeeting").length === 0) return;
-  if (Date.now() - meetingsFetchedAt > 55000) {
-    const r = await run(ZOOMCTL, ["meetings"], 15000);
-    try {
-      meetings = JSON.parse(r.stdout);
-      meetingsFetchedAt = Date.now();
-    } catch {
-      if (r.stderr) log("meetings failed", r.stderr.trim());
-    }
-  }
+  await fetchMeetings();
   renderNextMeeting();
 }
 
@@ -885,10 +899,44 @@ function fmtDuration(ms) {
   return h ? `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}` : `${m}:${String(sec).padStart(2, "0")}`;
 }
 
+/** The calendar entry for the current call: the not-yet-ended meeting whose start is closest to
+ * when the call started (within 30 min). Minutes are local minutes since midnight. */
+function currentCalendarMeeting() {
+  if (!callStartedAt) return null;
+  const minsOf = (d) => d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
+  const start = minsOf(new Date(callStartedAt));
+  const nowM = minsOf(new Date());
+  const cands = meetings.filter((m) => m.end - m.start <= 240 && Math.abs(m.start - start) <= 30 && m.end > start);
+  // Prefer one that hasn't ended yet, then the closest start time.
+  cands.sort((a, b) => (b.end > nowM) - (a.end > nowM) || Math.abs(a.start - start) - Math.abs(b.start - start));
+  return cands[0] || null;
+}
+
+function fmtClock(mins) {
+  const h = Math.floor(mins / 60) % 24, m = Math.round(mins % 60);
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")}`;
+}
+
 function renderCallKeys() {
+  const mode = state.callTimerMode === "remaining" ? "remaining" : "elapsed";
   for (const [ctx] of contextsFor("calltimer")) {
     const live = inMeeting && callStartedAt;
-    setKey(ctx, ["text", live ? fmtDuration(Date.now() - callStartedAt) : "–:––", live ? "on call" : "not in a call", "#000000"]);
+    if (!live) {
+      setKey(ctx, ["text", "–:––", "not in a call", "#000000"]);
+    } else if (mode === "elapsed") {
+      setKey(ctx, ["text", fmtDuration(Date.now() - callStartedAt), "elapsed", "#000000"]);
+    } else {
+      const m = currentCalendarMeeting();
+      if (!m) {
+        setKey(ctx, ["text", "–:––", "no end time", "#000000"]);
+        continue;
+      }
+      const d = new Date();
+      const endMs = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, m.end).getTime();
+      const left = endMs - Date.now();
+      if (left >= 0) setKey(ctx, ["text", fmtDuration(left), `left · ends ${fmtClock(m.end)}`, left <= 5 * 60e3 ? "#5a3a00" : "#000000"]);
+      else setKey(ctx, ["text", "+" + fmtDuration(-left), `over · ends ${fmtClock(m.end)}`, "#5a1a1a"]);
+    }
   }
   const clocks = contextsFor("clock");
   if (clocks.length) {

@@ -23,9 +23,9 @@ Accessibility API by a small Swift helper, `zoomctl`.
 | Share | Raise Hand | Mute | Video | Leave |
 |---|---|---|---|---|
 | 👍 | 👏 | ⏱ Call timer | 😂 | 🎉 |
-| 🔥 | 🙌 | 🕘 Clock | 🏠 Home | More ▸ |
+| green +1 `:plus1:` | 🙌 | 🕘 Clock | 🏠 Home | More ▸ |
 
-**More page:** 🐱 `:gr_meow_thinking:`, 😮, 💯 / Record, Chat, Participants / 🏠 Home, ◀ Back.
+**More page:** 🐱 `:gr_meow_thinking:`, 😮, 💯, 🔥 / Record, Chat, Participants / 🏠 Home, ◀ Back.
 
 **Song picker:** ◀ Back (top-left), 12 songs, and ◀ / ▶ page keys (bottom-right, with a page count).
 Shows the playlist, Liked Songs or album that's playing now (or the most recently played playlist);
@@ -47,8 +47,8 @@ home page; during a meeting, Back returns to the call page instead.
 | Playlists | Once logged in to the Spotify Web API (see below), the picker shows Liked Songs, then **your library's playlists, most recently played first** (from your last 50 plays), refreshed when the picker opens. Before login it falls back to `src/playlists.json`. Plays via AppleScript `play track "spotify:playlist:<id>"` (Liked Songs: `spotify:user:<user id>:collection`). Covers come from Spotify's public oEmbed endpoint; no login. Spotify grabs focus when it starts playing, which makes [AeroSpace](https://github.com/nikitabobko/AeroSpace) jump a monitor to Spotify's workspace; the plugin snapshots each monitor's visible workspace before playing and switches them back afterwards (one `aerospace eval` call). |
 | Songs | `spotify-api.js context` reads what's playing; `tracks <uri> <offset> 12` loads one page at a time (album covers cached). A pick runs AppleScript `play track "<track>" in context "<playlist>"`, then restores AeroSpace workspaces like the playlist keys. |
 | Zoom call keys | Mute, Video, Share, Leave, Record, Raise Hand and 👍👏😂🎉😮 use Elgato's Zoom plugin. |
-| Call timer / Clock | Timer counts from when the call was detected (or Zoom's own "connected time" when its header shows it); the start is saved in `logs/state.json` so it survives a Stream Deck restart. Clock shows the time and date. |
-| Extra reactions | 🔥 🙌 💯 and custom emoji drive Zoom's **React → More reactions** picker: search by shortcode, click the result (~1–2 s). |
+| Call timer / Clock | **Press the timer to swap views:** elapsed time, or time left until the calendar end of the meeting ("left · ends 9:00"; amber in the last 5 min, red "+m:ss over" after). The meeting is the calendar entry whose start is closest to when the call began (within 30 min). Elapsed counts from when the call was detected (or Zoom's own "connected time" when its header shows it); the start is saved in `logs/state.json` so it survives a Stream Deck restart. Clock shows the time and date. |
+| Extra reactions | 🔥 🙌 💯 and custom emoji drive Zoom's **React → More reactions** picker: search by shortcode, click the result (~1–2 s). The +1 key tries `:plus1:` first and falls back to ➕ (heavy plus sign) if Zoom has no `:plus1:`. |
 | Chat / Participants | Zoom's **View → Show/Hide** menu items. |
 | Home / Back | Leaves the plugin's profile and returns to the previously active (home) profile. |
 

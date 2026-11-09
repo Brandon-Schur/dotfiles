@@ -2,9 +2,9 @@
 """Build the bundled "Zoom Call.streamDeckProfile" (Stream Deck 5x3, profile format 3.0).
 
 Page 0 (main call page)                     Page 1 (More)
-  Share RaiseHand Mute  Video  Leave           🐱think 😮    💯
+  Share RaiseHand Mute  Video  Leave           🐱think 😮    💯    🔥
   👍    👏        Timer 😂     🎉              Record  Chat  People
-  🔥    🙌        Clock 🏠Home More ▸                               🏠Home ◀Back
+  ➕    🙌        Clock 🏠Home More ▸                               🏠Home ◀Back
 
 👍 👏 ❤️ 😂 🎉 😮 use the Elgato Zoom plugin (Zoom's native reactions); the rest use
 zoomctl to drive Zoom's emoji picker.
@@ -22,7 +22,7 @@ MINE = {"Name": "Zoom Call Deck", "UUID": "com.bschur.zoomcall", "Version": "1.0
 # Picker reactions: (label to match in Zoom, picker search term, icon stem)
 PICKER = {
     "fire": ("🔥", "fire", "e-fire"), "100": ("💯", "100", "e-100"), "eyes": ("👀", "eyes", "e-eyes"),
-    "raised": ("🙌", "raised_hands", "e-raise"), "meow": (":gr_meow_thinking:", "thinking", "e-meow"),
+    "raised": ("🙌", "raised_hands", "e-raise"), "plus": (":plus1:", "plus1", "e-plus"), "meow": (":gr_meow_thinking:", "thinking", "e-meow"),
 }
 
 
@@ -53,9 +53,15 @@ def react(emoji):
     return zoom("react", "React", {"emoji": emoji, "tone": "default_tone"})
 
 
+# Tried when the primary emoji isn't in Zoom's picker (e.g. a Slack-only custom emoji).
+FALLBACK = {"plus": ("➕", "heavy_plus_sign")}
+
+
 def picker(key, return_to=None):
     label, search, stem = PICKER[key]
     settings = {"emoji": label, "name": search}
+    if key in FALLBACK:
+        settings["fallbackEmoji"], settings["fallbackName"] = FALLBACK[key]
     if return_to is not None:
         settings["returnToPage"] = return_to
     return act(MINE, "com.bschur.zoomcall.react", search, settings, image=stem)
@@ -72,7 +78,7 @@ page0 = {
     "0,1": react("thumbsup"), "1,1": react("clap"),
     "2,1": act(MINE, "com.bschur.zoomcall.calltimer", "Call Timer", {}),
     "3,1": react("joy"), "4,1": react("tada"),
-    "0,2": picker("fire"), "1,2": picker("raised"),
+    "0,2": picker("plus"), "1,2": picker("raised"),
     "2,2": act(MINE, "com.bschur.zoomcall.clock", "Clock", {}),
     "3,2": act(MINE, "com.bschur.zoomcall.home", "Home", {}, image="k-home"),
     "4,2": act(MINE, "com.bschur.zoomcall.page", "More", {"page": 1}, image="k-more"),
@@ -82,6 +88,7 @@ page1 = {
     "0,0": picker("meow", return_to=0),
     "1,0": react("openmouth"),
     "2,0": picker("100", return_to=0),
+    "3,0": picker("fire", return_to=0),
     "0,1": zoom("record", "Record", {"mode": "local", "onPress": "stop"}, states=3),
     "1,1": act(MINE, "com.bschur.zoomcall.panel", "Chat", {"panel": "chat"}, image="k-chat"),
     "2,1": act(MINE, "com.bschur.zoomcall.panel", "Participants", {"panel": "participants"}, image="k-people"),
