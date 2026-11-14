@@ -16,6 +16,7 @@
 #   grid-workspace.sh           grid for the workspace 9 "parking" area
 #   zoom-route.sh               route Zoom meeting windows once titled
 #   relayout-all.sh             re-apply frames on visible workspaces
+#   fix-pair-orientation.sh     put 2 windows side by side after a grid loses one
 #   first-window-to-workspace.sh  send only an app's first window to a workspace
 #   workspaces.sh               laptop/desk app -> workspace tables (edit here)
 #   route.sh                    send a new window to its role's workspace
@@ -72,11 +73,13 @@ exec-on-workspace-change = [
     '/opt/homebrew/bin/sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE PREV_WORKSPACE=$AEROSPACE_PREV_WORKSPACE; /bin/bash ~/.config/aerospace/grid-workspace.sh 9 --if-changed',
 ]
 
-# Window focus change: notify SketchyBar (focused-window state icon), and
-# re-grid workspace 9 if its set of windows changed.
+# Window focus change: notify SketchyBar (focused-window state icon),
+# re-grid workspace 9 if its set of windows changed, and put 2 windows back
+# side by side if a window leaving a smart-tile grid left them stacked.
 on-focus-changed = [
     'exec-and-forget /opt/homebrew/bin/sketchybar --trigger aerospace_focus_change',
     'exec-and-forget /bin/bash ~/.config/aerospace/grid-workspace.sh 9 --if-changed',
+    'exec-and-forget /bin/bash ~/.config/aerospace/fix-pair-orientation.sh',
 ]
 
 # =============================================================================
@@ -141,14 +144,16 @@ outer.top = [{ monitor."built-in" = 5 }, 0]
 
 alt-shift-enter = 'exec-and-forget open -n /Applications/Ghostty.app'
 
-# Flameshot (macOS has no global Flameshot hotkey). capture.sh first kills any
+# Flameshot. Its own global hotkeys in flameshot.ini must not reuse these keys
+# (Qt "Meta" = Ctrl on macOS), or they fire too. capture.sh first kills any
 # hung, invisible capture so the hotkey never gets stuck.
-#   ctrl-shift-4 : full capture GUI. Annotate, then save/copy with the toolbar
+#   ctrl-`       : full capture GUI. Annotate, then save (also copies to the
+#                  clipboard) with the toolbar
 #                  buttons; in-overlay keys like Ctrl+C don't work on macOS
 #                  (flameshot issue #1897).
 #   ctrl-shift-` : quick grab. Drag a region; on release it's copied to the
 #                  clipboard and the overlay closes.
-ctrl-shift-4        = 'exec-and-forget /bin/bash ~/.config/flameshot/capture.sh --path ~/Photos/Screenshots'
+ctrl-backtick       = 'exec-and-forget /bin/bash ~/.config/flameshot/capture.sh --path ~/Photos/Screenshots --clipboard'
 ctrl-shift-backtick = 'exec-and-forget /bin/bash ~/.config/flameshot/capture.sh --accept-on-select --clipboard'
 
 # Wisp transcript session (start/stop). Wisp 2.9 removed its own shortcut, so
