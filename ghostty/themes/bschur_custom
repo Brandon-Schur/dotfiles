@@ -1,4 +1,4 @@
-# bschur_custom: dark palette shared with nvim, tmux, SketchyBar, Obsidian and Sharp Tabs
+# bschur_custom: dark palette shared with nvim, tmux, SketchyBar and Obsidian
 background = #1e252f
 foreground = #dee3ea
 cursor-color = #dee3ea

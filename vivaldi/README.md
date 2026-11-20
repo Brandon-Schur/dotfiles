@@ -1,13 +1,7 @@
-# Vivaldi + Sharp Tabs
+# Vivaldi
 
-Vivaldi UI tweaks for using the [Sharp Tabs](https://github.com/maddada/sharptabs)
-extension as a vertical tab sidebar, themed with the bschur_custom palette.
-
-The sidebar auto-hides to a narrow rail. Collapsed, it still shows each tab's
-favicon and the start of its title, and each tab group as a colored pill with
-the start of its name and its tab count. Hovering opens the full panel over the
-page, with every tab at the same height in both states so the one under the
-cursor stays under the cursor.
+Vivaldi UI tweaks. Tabs use Vivaldi's own vertical tab bar, workspaces, and
+tab stacks (Accordion style) for groups.
 
 ## Files
 
@@ -15,38 +9,17 @@ cursor stays under the cursor.
 |---|---|---|
 | `mods/Import.css` | Vivaldi CSS mods folder | Entry point; `@import`s the other files |
 | `mods/HidePanelBar.css` | Vivaldi CSS mods folder | Hides the vertical panel icon strip |
-| `mods/SharpTabsAutoHide.css` | Vivaldi CSS mods folder | Collapses the side panel to a rail, expands on hover, removes the web panel toolbar |
-| `sharptabs/bschur_custom.css` | Sharp Tabs → Settings → Advanced → Custom CSS | Palette, plus the compact "Rail mode" layout used while collapsed |
-
-`Import.css` also imports `VividPeek.css` from
-[Awesome-Vivaldi](https://github.com/PaRr0tBoY/Awesome-Vivaldi), which isn't
-included here. Remove that line if you don't use it.
+| `mods/StackFolders.css` | Vivaldi CSS mods folder | Accordion tab stacks look like folders: folder icon and bold name on the header, indented tabs with a guide line, quieter expand/collapse strip. Needs Tab Stacking set to Accordion and a left/right tab bar |
+| `js/StackFolderClick.js` | Inside Vivaldi.app (via `~/VivaldiMods/reapply.sh`) | Left-click on a stack header expands/collapses it instead of switching to its tab; Alt+drag moves the stack |
+| `js/TabBarAutoCollapse.js` | Inside Vivaldi.app (via `~/VivaldiMods/reapply.sh`) | Makes "Expand Tab Bar on Hover" collapse about 1 s after the cursor moves onto the page (macOS often misses that exit, leaving the bar open) |
+| `reapply.sh` | `~/VivaldiMods/` | Puts the JS mods back into Vivaldi.app after updates |
 
 ## Install
 
 1. Copy `mods/` to a folder of your choice (e.g. `~/VivaldiMods/`).
 2. Vivaldi → Settings → Appearance → Custom UI Modifications → select that folder.
-   On older versions, enable `vivaldi://experiments` → "Allow CSS modifications" first.
-3. Open Sharp Tabs as a side panel, then paste `sharptabs/bschur_custom.css`
-   into Sharp Tabs → Settings → Advanced → Custom CSS and enable it.
-4. Quit Vivaldi completely (Cmd+Q) and reopen it. CSS mods only reload on a
-   full restart; the Sharp Tabs CSS applies immediately.
-
-## Tuning
-
-- Collapsed and expanded widths, and the hover delays: the `--st-*` variables
-  at the top of `SharpTabsAutoHide.css`.
-- Item width inside the rail: `--rail` / `--rail-gap` in the Rail mode section
-  of `bschur_custom.css`. Keep `--rail + 2 * --rail-gap` close to `--st-rail`.
-- Rail mode turns on at a page width of 160px or less. It also overrides Sharp
-  Tabs' own narrow mode (84px or less), which would otherwise hide titles and
-  group names.
+3. Quit Vivaldi completely (Cmd+Q) and reopen it. CSS mods only reload on a full restart.
 
 ## Caveats
 
-- Drag-resizing the panel no longer works; change `--st-expanded` instead.
-- The panel collapses as soon as the mouse leaves, even with a Sharp Tabs menu open.
-- Compact pinned tabs fit fewer icons per row in the rail, so rows below them
-  shift slightly between collapsed and expanded.
-- Vivaldi's Panel Toggle command turns the auto-hide off (the panel stays open
-  and the icon strip comes back).
+- Vivaldi's Panel Toggle command shows the panel icon strip again.
