@@ -1,0 +1,7 @@
+{
+  "showRibbon": false,
+  "cssTheme": "Minimal",
+  "enabledCssSnippets": [
+    "bschur_custom"
+  ]
+}
