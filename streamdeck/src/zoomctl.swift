@@ -8,6 +8,8 @@
 //   zoomctl toggle chat|participants
 //   zoomctl dump [all]             -> print the AX tree of the meeting window (debugging)
 //   zoomctl press <regex>          -> press first matching button in any Zoom window (debugging)
+//   zoomctl wisp start|stop        -> start/stop a Wisp transcript session via its menu bar item, then hide Wisp
+//   zoomctl wisp-menu              -> list Wisp's menu bar items (debugging)
 //
 // Exit codes: 0 ok, 1 failure (details on stderr), 2 usage, 3 not trusted, 4 no meeting.
 
@@ -627,10 +629,16 @@ func cmdSlackStatusDnd(_ mode: String, statusText: String, emojiName: String) {
         } else {
             press(u) // no status set; close the menu
         }
-        // Also end any separate pause (e.g. a timed one). "resume" never pauses, so this is safe.
-        sleepMs(600)
+        // Clearing a "pause until status is cleared" status ends that pause by itself. Only fall back to the
+        // Notifications submenu (which needs pointer hover, so it moves the cursor) if Slack still reports a
+        // separate pause, e.g. a timed one.
+        let pausedLabel = "notifications snoozed|notifications paused"
+        let stillPaused = waitFor(2000, step: 200) { () -> Bool? in
+            guard let u2 = user() else { return nil }
+            return find(u2, limit: 50, { labelMatches($0, pausedLabel) }) == nil ? false : nil
+        } == nil
         restoreAll()
-        cmdSlackDnd("resume")
+        if stillPaused { cmdSlackDnd("resume") } else { print("off") }
         return
     }
 
@@ -668,6 +676,97 @@ func cmdSlackStatusDnd(_ mode: String, statusText: String, emojiName: String) {
     print("on")
 }
 
+// MARK: - Wisp transcript sessions (menu bar extra)
+
+// Wisp has no shortcut-free API for transcript sessions; its menu bar item has explicit
+// "Start Transcript…" / "Stop Transcript…" entries, so we press those through Accessibility.
+let wispBundleID = "com.wisp.app"
+let wispStart = ["Start Transcript", "Start Long-Form"]
+let wispStop = ["Stop Transcript", "Stop Long-Form"]
+
+func wispApp() -> (NSRunningApplication, AXUIElement)? {
+    guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: wispBundleID).first else { return nil }
+    let ax = AXUIElementCreateApplication(app.processIdentifier)
+    AXUIElementSetMessagingTimeout(ax, 3)
+    return (app, ax)
+}
+
+/// Opens Wisp's menu bar menu and returns (menu, item titles). Caller must press an item or cancel.
+func openWispMenu(_ ax: AXUIElement) -> (AXUIElement, [(String, AXUIElement)])? {
+    guard let bar = waitFor(10000, step: 250, { () -> AXUIElement? in
+        guard let v = attr(ax, "AXExtrasMenuBar"), CFGetTypeID(v) == AXUIElementGetTypeID() else { return nil }
+        return (v as! AXUIElement)
+    }), let item = children(bar).first else { return nil }
+    press(item)
+    guard let menu = waitFor(1500, { children(item).first { role($0) == "AXMenu" } }) else { return nil }
+    let items = children(menu).compactMap { e -> (String, AXUIElement)? in
+        guard let t = str(e, kAXTitleAttribute), !t.isEmpty else { return nil }
+        return (t, e)
+    }
+    return (menu, items)
+}
+
+/// Hides Wisp (all its windows) as soon as a window shows up, or after `ms` regardless.
+func hideWispWhenWindowAppears(_ app: NSRunningApplication, _ ax: AXUIElement, ms: Int) {
+    _ = waitFor(ms, step: 100) { windows(ax).isEmpty ? nil : true }
+    sleepMs(300) // let the window finish opening so hide doesn't race it
+    if !app.hide() { AXUIElementSetAttributeValue(ax, kAXHiddenAttribute as CFString, kCFBooleanTrue) }
+}
+
+func cmdWisp(_ target: String) {
+    requireTrusted()
+    guard let (app, ax) = wispApp() else { fail("wisp not running", code: 4) }
+    guard let (menu, items) = openWispMenu(ax) else { fail("Wisp menu bar menu not found") }
+    let pick = { (prefixes: [String]) in items.first { t, _ in prefixes.contains { t.hasPrefix($0) } } }
+    let (want, other) = target == "start" ? (wispStart, wispStop) : (wispStop, wispStart)
+    guard let (title, el) = pick(want) else {
+        AXUIElementPerformAction(menu, kAXCancelAction as CFString)
+        if pick(other) != nil { print(target == "start" ? "on" : "off"); exit(0) } // already in that state
+        fail("no transcript item in Wisp menu: " + items.map { $0.0 }.joined(separator: " | "))
+    }
+    press(el)
+    FileHandle.standardError.write("pressed \(title)\n".data(using: .utf8)!)
+    if target == "start" {
+        // Starting opens the transcript window: hide Wisp so it never shows.
+        hideWispWhenWindowAppears(app, ax, ms: 6000)
+    } else {
+        finishWispTranscript(ax)
+    }
+    print(target == "start" ? "on" : "off")
+}
+
+/// After Stop, the transcript window offers "Done": press it, then close the window if it's still open.
+/// Windows of a hidden app stay in the AX tree, so this works without showing Wisp.
+func finishWispTranscript(_ ax: AXUIElement) {
+    let isDone: (AXUIElement) -> Bool = { role($0) == "AXButton" && labelMatches($0, "^done$") }
+    let found = waitFor(8000, step: 200) { () -> (AXUIElement, AXUIElement)? in
+        for w in windows(ax) { if let b = find(w, limit: 4000, isDone) { return (w, b) } }
+        return nil
+    }
+    guard let (win, done) = found else {
+        let seen = windows(ax).map { w in
+            (str(w, kAXTitleAttribute) ?? "?") + ": " + findAll(w, limit: 4000, { role($0) == "AXButton" }).flatMap(labels).joined(separator: ", ")
+        }
+        FileHandle.standardError.write("Done button not found; windows: \(seen.joined(separator: " | "))\n".data(using: .utf8)!)
+        return
+    }
+    press(done)
+    FileHandle.standardError.write("pressed Done\n".data(using: .utf8)!)
+    let closed = waitFor(2000, step: 150) { windows(ax).contains { CFEqual($0, win) } ? nil : true }
+    if closed == nil, let close = attr(win, kAXCloseButtonAttribute), CFGetTypeID(close) == AXUIElementGetTypeID() {
+        press(close as! AXUIElement)
+        FileHandle.standardError.write("closed transcript window\n".data(using: .utf8)!)
+    }
+}
+
+func cmdWispMenu() {
+    requireTrusted()
+    guard let (_, ax) = wispApp() else { fail("wisp not running", code: 4) }
+    guard let (menu, items) = openWispMenu(ax) else { fail("Wisp menu bar menu not found") }
+    AXUIElementPerformAction(menu, kAXCancelAction as CFString)
+    print(items.map { $0.0 }.joined(separator: "\n"))
+}
+
 // MARK: - main
 
 let args = Array(CommandLine.arguments.dropFirst())
@@ -686,6 +785,8 @@ case "slack-status-dnd": cmdSlackStatusDnd(args.count >= 2 ? args[1] : "toggle",
                                           statusText: args.count >= 3 ? args[2] : "Focus",
                                           emojiName: args.count >= 4 ? args[3] : "tomato")
 case "join" where args.count >= 2: cmdJoin(args[1])
+case "wisp" where args.count >= 2 && ["start", "stop"].contains(args[1]): cmdWisp(args[1])
+case "wisp-menu": cmdWispMenu()
 case "press" where args.count >= 2: // debugging: press the first button in any Zoom window matching a regex
     requireTrusted()
     guard let (_, app) = zoomApp() else { fail("zoom not running", code: 4) }

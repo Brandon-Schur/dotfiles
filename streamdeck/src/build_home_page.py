@@ -4,9 +4,9 @@ Run only while Stream Deck is quit.
 
   Slack    Outlook   Next mtg   DnD 🍅/🔭  Clock
   Art TL   Art TR    ⏮          ⏯           ⏭
-  Art BL   Art BR    🔀         Playlists   (empty)
+  Art BL   Art BR    🔀         Songs/Lists Wisp ⏺
 
-The Playlists key and picker page are added by playlists_page.py.
+The Songs/Playlists key, the Wisp key and the picker pages are added by playlists_page.py.
 
 Reuses the existing Spotify play/prev/next/shuffle actions; drops the app launchers.
 """

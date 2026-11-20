@@ -217,8 +217,8 @@
     },
     {
       "UUID": "com.bschur.zoomcall.songs",
-      "Name": "Song Picker",
-      "Tooltip": "Pick a song from the playlist that's playing",
+      "Name": "Songs / Playlists",
+      "Tooltip": "Tap: pick a song from what's playing. Hold: playlist picker",
       "Icon": "imgs/action-open",
       "Controllers": [
         "Keypad"
@@ -275,6 +275,20 @@
       "UUID": "com.bschur.zoomcall.clock",
       "Name": "Clock",
       "Tooltip": "Current time and date",
+      "Icon": "imgs/action-open",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/key-open"
+        }
+      ]
+    },
+    {
+      "UUID": "com.bschur.zoomcall.wisp",
+      "Name": "Wisp Recording",
+      "Tooltip": "Start/stop a Wisp transcript session with the window hidden; shows elapsed and today's total",
       "Icon": "imgs/action-open",
       "Controllers": [
         "Keypad"

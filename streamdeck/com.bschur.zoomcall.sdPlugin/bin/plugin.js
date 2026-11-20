@@ -81,10 +81,12 @@ ws.on("message", (raw) => {
       break;
     case "keyDown":
       if (msg.action === A + "slackdnd") slackKeyDown(msg);
+      else if (msg.action === A + "songs") holdKeyDown(msg, () => switchProfile(msg.device, PROFILE, PLAYLIST_PAGE));
       else onKeyDown(msg).catch((e) => log("keyDown error", String(e)));
       break;
     case "keyUp":
       if (msg.action === A + "slackdnd") slackKeyUp(msg);
+      else if (msg.action === A + "songs") holdKeyUp(msg, () => openSongs(msg.context, msg.device).catch((e) => log("songs error", String(e))));
       break;
     case "willAppear":
       visible.set(msg.context, {
@@ -256,6 +258,8 @@ async function onKeyDown({ action, context, device, payload }) {
       return pressSong(context, device);
     case A + "songpage":
       return flipSongPage(s, context);
+    case A + "wisp":
+      return pressWisp(context);
     default:
       return;
   }
@@ -309,6 +313,7 @@ function refreshSoon() {
     renderPlaylists();
     renderSongs();
     renderCallKeys();
+    renderWisp();
   }, 300);
 }
 
@@ -973,4 +978,136 @@ function slackKeyUp(msg) {
   clearTimeout(h.timer);
   const s = (msg.payload && msg.payload.settings) || {};
   pressSlackDnd(s, msg.context).catch((e) => log("slack dnd error", String(e)));
+}
+
+// --- Generic tap/hold keys (Songs: tap = song picker, hold = playlist picker) ---
+const holds = new Map(); // context -> { timer, fired }
+
+function holdKeyDown(msg, onHold) {
+  const h = { fired: false };
+  h.timer = setTimeout(() => {
+    h.fired = true;
+    Promise.resolve(onHold()).catch((e) => log("hold error", msg.action, String(e)));
+  }, HOLD_MS);
+  holds.set(msg.context, h);
+}
+
+function holdKeyUp(msg, onTap) {
+  const h = holds.get(msg.context);
+  holds.delete(msg.context);
+  if (!h || h.fired) return;
+  clearTimeout(h.timer);
+  onTap();
+}
+
+// --- Wisp transcript sessions: start/stop without the transcript window; time tracking ---
+// State and durations come from Wisp's own log, so sessions started from the menu bar or the
+// AeroSpace hotkey are tracked too. Today's total = finished sessions + the running one.
+const WISP_LOG = path.join(require("node:os").homedir(), "Library/Logs/Wisp/wisp.log");
+const wispLog = { offset: 0, partial: "", byPid: {}, totals: {} }; // totals: YYYY-MM-DD -> seconds
+let wisp = { pid: null, busy: null, error: false };
+
+const dayOf = (ms) => new Date(ms).toLocaleDateString("en-CA"); // local YYYY-MM-DD
+
+function readWispLog() {
+  let size;
+  try {
+    size = fs.statSync(WISP_LOG).size;
+  } catch {
+    return;
+  }
+  if (size < wispLog.offset) Object.assign(wispLog, { offset: 0, partial: "" }); // log was rotated
+  if (size === wispLog.offset) return;
+  const fd = fs.openSync(WISP_LOG, "r");
+  try {
+    const buf = Buffer.alloc(size - wispLog.offset);
+    fs.readSync(fd, buf, 0, buf.length, wispLog.offset);
+    wispLog.offset = size;
+    const lines = (wispLog.partial + buf.toString("utf8")).split("\n");
+    wispLog.partial = lines.pop();
+    for (const line of lines) parseWispLine(line);
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+function parseWispLine(line) {
+  if (!/Long-form session|kind=longform|session-end/.test(line)) return;
+  let e;
+  try {
+    e = JSON.parse(line);
+  } catch {
+    return;
+  }
+  const t = Date.parse(e.t);
+  const m = String(e.m || "");
+  const cur = wispLog.byPid[e.p];
+  if (/^take-start .*kind=longform/.test(m)) wispLog.byPid[e.p] = { recording: true, startedAt: t };
+  else if (e.c === "transcription" && m.startsWith("Long-form session started") && cur && cur.recording) cur.startedAt = t;
+  else if (/^take-end .*kind=longform/.test(m) || m === "session-end") wispLog.byPid[e.p] = { recording: false };
+  const stop = e.c === "transcription" && m.match(/^Long-form session stopped\. Duration: ([\d.]+)s$/);
+  if (stop) {
+    const day = dayOf(t);
+    wispLog.totals[day] = (wispLog.totals[day] || 0) + Number(stop[1]);
+    wispLog.byPid[e.p] = { recording: false };
+  }
+}
+
+function wispSession() {
+  const s = wisp.pid && wispLog.byPid[wisp.pid];
+  return s && s.recording ? s : null;
+}
+
+function fmtHM(sec) {
+  const m = Math.floor(sec / 60);
+  return m < 60 ? `${m}m` : `${Math.floor(m / 60)}h${String(m % 60).padStart(2, "0")}`;
+}
+
+let wispPidCheckedAt = 0;
+async function refreshWisp(force) {
+  if (contextsFor("wisp").length === 0) return;
+  if (force || Date.now() - wispPidCheckedAt > 3000) {
+    wispPidCheckedAt = Date.now();
+    const r = await run("/usr/bin/pgrep", ["-x", "Wisp"]);
+    wisp.pid = r.stdout.split(/\s+/).filter(Boolean)[0] || null;
+  }
+  readWispLog();
+  renderWisp();
+}
+setInterval(refreshWisp, 1000);
+
+function renderWisp() {
+  const s = wispSession();
+  const today = (wispLog.totals[dayOf(Date.now())] || 0) + (s ? (Date.now() - s.startedAt) / 1000 : 0);
+  for (const [ctx] of contextsFor("wisp")) {
+    if (wisp.busy) setKey(ctx, ["text", "⏺ …", wisp.busy === "stop" ? "Stopping Wisp" : "Starting Wisp", "#2d3a46"]);
+    else if (wisp.error) setKey(ctx, ["text", "⏺ ⚠", "Couldn't drive Wisp", "#7a2e2e"]);
+    else if (s) setKey(ctx, ["text", fmtDuration(Date.now() - s.startedAt), `● REC · ${fmtHM(today)} today`, "#b3261e"]);
+    else setKey(ctx, ["text", "⏺ Rec", `Wisp · ${fmtHM(today)} today`, "#2d3a46"]);
+  }
+}
+
+async function pressWisp(context) {
+  if (wisp.busy) return;
+  await refreshWisp(true);
+  const target = wispSession() ? "stop" : "start";
+  wisp = { ...wisp, busy: target, error: false };
+  renderWisp();
+  const before = await aerospaceSnapshot();
+  if (!wisp.pid) {
+    await run("/usr/bin/open", ["-g", "-b", "com.wisp.app"]); // launch in the background; zoomctl waits for its menu
+  }
+  const r = await run(ZOOMCTL, ["wisp", target], 30000);
+  wisp.busy = null;
+  aerospaceRestore(before);
+  if (r.code === 0) {
+    log("wisp", target, r.stderr.trim());
+    send({ event: "showOk", context });
+  } else {
+    wisp.error = true;
+    log("wisp failed", target, r.code, r.stderr.trim());
+    send({ event: "showAlert", context });
+    setTimeout(() => ((wisp.error = false), renderWisp()), 5000);
+  }
+  await refreshWisp(true);
 }

@@ -3,7 +3,7 @@
 
 Plugins can leave pages of their own bundled profile (back to the home page), but they can't close a
 built-in folder. So the picker lives in the plugin's profile:
-  - home page 3,2: "Open Playlists" key (switches to Zoom Call page index 2)
+  - home page 3,2: Songs key; tap opens the song picker, hold opens the playlist picker (page index 2)
   - picker page: Back (0,0) + up to 14 playlists from playlists.json; a pick plays it and returns home
 Also removes the old built-in Playlists folder page. Edit playlists.json and re-run to change the list.
 """
@@ -69,10 +69,6 @@ if old and old["UUID"] == "com.elgato.streamdeck.profile.openchild":
     shutil.rmtree(f"{home}/Profiles/{old['Settings']['ProfileUUID'].upper()}", ignore_errors=True)
     print("removed old folder page")
 os.makedirs(f"{hdir}/Images", exist_ok=True)
-icon(f"{hdir}/Images", "k-playlists\t144\t🎵\tPlaylists\t#2d3a46\n")
-acts["3,2"] = act("com.bschur.zoomcall.playlists", "Playlists", image="Images/k-playlists.png")
-json.dump(hm, open(f"{hdir}/manifest.json", "w"))
-print("home 3,2 -> Open Playlists")
 
 # --- song picker: page index 3 of the Zoom Call profile + home 4,2 key ---
 top = json.load(open(f"{zc}/manifest.json"))
@@ -99,8 +95,16 @@ json.dump({"Controllers": [{"Actions": spage, "Type": "Keypad"}], "Icon": "", "N
           open(f"{sdir}/manifest.json", "w"))
 print("song page", sid, "index 3 with", sum(a["UUID"].endswith(".song") for a in spage.values()), "song slots")
 
+# Home 3,2: one key for both pickers (tap = songs, hold >= 0.5 s = playlists; see plugin.js holdKeyDown).
+# Home 4,2: Wisp transcript session start/stop + time tracking (image drawn live by the plugin).
 hm = json.load(open(f"{hdir}/manifest.json"))
-icon(f"{hdir}/Images", "k-songs\t144\t🎶\tSongs\t#2d3a46\n")
-hm["Controllers"][0]["Actions"]["4,2"] = act("com.bschur.zoomcall.songs", "Songs", image="Images/k-songs.png")
+icon(f"{hdir}/Images", "k-songs\t144\t🎶\tSongs · hold: lists\t#2d3a46\n")
+hm["Controllers"][0]["Actions"]["3,2"] = act("com.bschur.zoomcall.songs", "Songs / Playlists", image="Images/k-songs.png")
+hm["Controllers"][0]["Actions"]["4,2"] = act("com.bschur.zoomcall.wisp", "Wisp Recording")
+for stale in ("k-playlists.png",):
+    try:
+        os.remove(f"{hdir}/Images/{stale}")
+    except FileNotFoundError:
+        pass
 json.dump(hm, open(f"{hdir}/manifest.json", "w"))
-print("home 4,2 -> Song Picker")
+print("home 3,2 -> Songs (hold: Playlists), 4,2 -> Wisp Recording")
