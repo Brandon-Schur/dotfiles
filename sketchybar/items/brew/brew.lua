@@ -1,5 +1,8 @@
 SBAR.exec("sketchybar --add event brew_update")
 
+-- Hidden until this many Homebrew packages are outdated.
+local SHOW_AT = 10
+
 local brew = SBAR.add("item", "brew", {
   position = "right",
   icon = {
@@ -9,6 +12,9 @@ local brew = SBAR.add("item", "brew", {
   label = {
     string = "?",
   },
+  drawing = false,
+  -- Keep polling while hidden; the global default is "when_shown".
+  updates = "on",
   update_freq = 1800, -- half an hour
   popup = {
     align = "right",
@@ -64,6 +70,7 @@ local function render_bar_item(count)
   end
 
   brew:set({
+    drawing = count >= SHOW_AT,
     icon = { color = color },
     label = { string = label },
   })
@@ -94,8 +101,10 @@ end
 
 local function update(sender)
   local prev_count = get_brew_count()
-  -- before checking outdated, run brew update
-  SBAR.exec("/bin/zsh -lc 'brew update 1>/dev/null && brew outdated'", function(outdated)
+  -- Refresh the package index first. Use ";" rather than "&&": if any tap
+  -- fails to fetch, `brew update` exits 1, and "&&" skipped `brew outdated`
+  -- entirely, so the item always showed a green checkmark.
+  SBAR.exec("/bin/zsh -lc 'brew update >/dev/null 2>&1; brew outdated --quiet'", function(outdated)
     local count = 0
     if outdated and outdated ~= "" then
       for _ in outdated:gmatch("[^\r\n]+") do
@@ -151,7 +160,14 @@ brew:subscribe("mouse.exited.global", function()
   toggle_popup("off")
 end)
 
-brew:subscribe("mouse.clicked", function()
+-- Left click: toggle the outdated list. Right click: upgrade everything in the
+-- background (helpers/brew_upgrade.sh), which re-triggers brew_update when done.
+brew:subscribe("mouse.clicked", function(env)
+  if env and env.BUTTON == "right" then
+    brew:set({ popup = { drawing = false }, label = { string = ICONS.loading } })
+    SBAR.exec(HELPERS_HOME .. "brew_upgrade.sh >/dev/null 2>&1 &")
+    return
+  end
   toggle_popup("toggle")
 end)
 
