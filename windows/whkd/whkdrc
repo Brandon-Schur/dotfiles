@@ -1,0 +1,94 @@
+.shell powershell
+
+# Reload whkd configuration
+alt + o                 : taskkill /f /im whkd.exe; Start-Process whkd -WindowStyle hidden
+alt + shift + o         : & "C:\Program Files\komorebi\bin\komorebic.exe" reload-configuration
+
+# Toggle shortcuts overlay
+alt + i                 : & "C:\Program Files\komorebi\bin\komorebic.exe" toggle-shortcuts
+
+# Close window (ctrl+shift+q and alt+shift+z)
+ctrl + shift + q         : & "C:\Program Files\komorebi\bin\komorebic.exe" close
+alt + shift + z         : & "C:\Program Files\komorebi\bin\komorebic.exe" close
+
+# Minimize
+alt + m                 : & "C:\Program Files\komorebi\bin\komorebic.exe" minimize
+
+# Focus windows (aerospace: ctrl-h/j/k/l -> alt-h/j/k/l)
+alt + h                 : & "C:\Program Files\komorebi\bin\komorebic.exe" focus left
+alt + j                 : & "C:\Program Files\komorebi\bin\komorebic.exe" focus down
+alt + k                 : & "C:\Program Files\komorebi\bin\komorebic.exe" focus up
+alt + l                 : & "C:\Program Files\komorebi\bin\komorebic.exe" focus right
+
+# Move windows (aerospace: ctrl-shift-h/j/k/l -> alt-shift-h/j/k/l)
+alt + shift + h         : & "C:\Program Files\komorebi\bin\komorebic.exe" move left
+alt + shift + j         : & "C:\Program Files\komorebi\bin\komorebic.exe" move down
+alt + shift + k         : & "C:\Program Files\komorebi\bin\komorebic.exe" move up
+alt + shift + l         : & "C:\Program Files\komorebi\bin\komorebic.exe" move right
+
+# Promote window
+alt + shift + return    : & "C:\Program Files\komorebi\bin\komorebic.exe" promote
+
+# Stack windows (moved off plain alt+arrows so alt+arrows can resize)
+alt + shift + left      : & "C:\Program Files\komorebi\bin\komorebic.exe" stack left
+alt + shift + down      : & "C:\Program Files\komorebi\bin\komorebic.exe" stack down
+alt + shift + up        : & "C:\Program Files\komorebi\bin\komorebic.exe" stack up
+alt + shift + right     : & "C:\Program Files\komorebi\bin\komorebic.exe" stack right
+alt + oem_1             : & "C:\Program Files\komorebi\bin\komorebic.exe" unstack
+alt + oem_4             : & "C:\Program Files\komorebi\bin\komorebic.exe" cycle-stack previous
+alt + oem_6             : & "C:\Program Files\komorebi\bin\komorebic.exe" cycle-stack next
+
+# Resize (Grid ignores resize-axis, so adjust column/row ratios instead)
+# alt+arrows and alt+p/u match AeroSpace; +/- keys are kept as aliases.
+alt + left              : & "C:\Users\Brandon\.config\whkd\resize-grid.ps1" -Axis horizontal -Direction decrease
+alt + right             : & "C:\Users\Brandon\.config\whkd\resize-grid.ps1" -Axis horizontal -Direction increase
+alt + up                : & "C:\Users\Brandon\.config\whkd\resize-grid.ps1" -Axis vertical -Direction increase
+alt + down              : & "C:\Users\Brandon\.config\whkd\resize-grid.ps1" -Axis vertical -Direction decrease
+alt + p                 : & "C:\Users\Brandon\.config\whkd\resize-grid.ps1" -Axis horizontal -Direction increase
+alt + u                 : & "C:\Users\Brandon\.config\whkd\resize-grid.ps1" -Axis horizontal -Direction decrease
+alt + oem_plus          : & "C:\Users\Brandon\.config\whkd\resize-grid.ps1" -Axis horizontal -Direction increase
+alt + oem_minus         : & "C:\Users\Brandon\.config\whkd\resize-grid.ps1" -Axis horizontal -Direction decrease
+alt + shift + oem_plus  : & "C:\Users\Brandon\.config\whkd\resize-grid.ps1" -Axis vertical -Direction increase
+alt + shift + oem_minus : & "C:\Users\Brandon\.config\whkd\resize-grid.ps1" -Axis vertical -Direction decrease
+
+# Float toggle
+alt + t                 : & "C:\Program Files\komorebi\bin\komorebic.exe" toggle-float
+alt + shift + t         : & "C:\Program Files\komorebi\bin\komorebic.exe" toggle-float
+
+# Fullscreen/monocle
+alt + f                 : & "C:\Program Files\komorebi\bin\komorebic.exe" toggle-monocle
+ctrl + f                : & "C:\Program Files\komorebi\bin\komorebic.exe" toggle-monocle
+
+# Orientation toggle
+alt + v                 : & "C:\Program Files\komorebi\bin\komorebic.exe" flip-layout vertical
+
+# Retile
+alt + shift + r         : & "C:\Program Files\komorebi\bin\komorebic.exe" retile
+
+# Pause tiling (alt+p is reserved for resize width decrease)
+alt + shift + p         : & "C:\Program Files\komorebi\bin\komorebic.exe" toggle-pause
+
+# Workspaces: 1,2 on monitor 0 and 3,4 on monitor 1
+# Use monitor-scoped commands so alt+3/4 never create workspaces on monitor 0.
+alt + 1                 : & "C:\Program Files\komorebi\bin\komorebic.exe" focus-monitor-workspace 0 0
+alt + 2                 : & "C:\Program Files\komorebi\bin\komorebic.exe" focus-monitor-workspace 0 1
+alt + 3                 : & "C:\Program Files\komorebi\bin\komorebic.exe" focus-monitor-workspace 1 0
+alt + 4                 : & "C:\Program Files\komorebi\bin\komorebic.exe" focus-monitor-workspace 1 1
+
+# Move windows across workspaces (same monitor mapping)
+alt + shift + 1         : & "C:\Program Files\komorebi\bin\komorebic.exe" move-to-monitor-workspace 0 0
+alt + shift + 2         : & "C:\Program Files\komorebi\bin\komorebic.exe" move-to-monitor-workspace 0 1
+alt + shift + 3         : & "C:\Program Files\komorebi\bin\komorebic.exe" move-to-monitor-workspace 1 0
+alt + shift + 4         : & "C:\Program Files\komorebi\bin\komorebic.exe" move-to-monitor-workspace 1 1
+
+# Next/prev workspace (aerospace: ctrl-w/q -> alt-w/q)
+alt + w                 : & "C:\Program Files\komorebi\bin\komorebic.exe" cycle-workspace next
+alt + q                 : & "C:\Program Files\komorebi\bin\komorebic.exe" cycle-workspace previous
+
+# Move window to next/prev workspace
+alt + shift + w         : & "C:\Program Files\komorebi\bin\komorebic.exe" cycle-move-to-workspace next
+alt + shift + q         : & "C:\Program Files\komorebi\bin\komorebic.exe" cycle-move-to-workspace previous
+
+# Monitor navigation
+alt + shift + a         : & "C:\Program Files\komorebi\bin\komorebic.exe" cycle-monitor previous
+alt + shift + s         : & "C:\Program Files\komorebi\bin\komorebic.exe" cycle-monitor next
