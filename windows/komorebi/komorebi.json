@@ -18,13 +18,12 @@
     {
       "workspaces": [
         { "name": "1", "layout": "Grid" },
-        { "name": "2", "layout": "Grid" }
+        { "name": "3", "layout": "Grid" }
       ]
     },
     {
-      "work_area_offset": { "left": 0, "top": 35, "right": 0, "bottom": 0 },
       "workspaces": [
-        { "name": "3", "layout": "Grid" },
+        { "name": "2", "layout": "Grid" },
         { "name": "4", "layout": "Grid" }
       ]
     }

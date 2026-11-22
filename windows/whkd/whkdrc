@@ -7,8 +7,9 @@ alt + shift + o         : & "C:\Program Files\komorebi\bin\komorebic.exe" reload
 # Toggle shortcuts overlay
 alt + i                 : & "C:\Program Files\komorebi\bin\komorebic.exe" toggle-shortcuts
 
-# Close window (ctrl+shift+q and alt+shift+z)
-ctrl + shift + q         : & "C:\Program Files\komorebi\bin\komorebic.exe" close
+# Close window (win+q is preferred; old bindings remain as aliases)
+win + q                 : & "C:\Program Files\komorebi\bin\komorebic.exe" close
+ctrl + shift + q        : & "C:\Program Files\komorebi\bin\komorebic.exe" close
 alt + shift + z         : & "C:\Program Files\komorebi\bin\komorebic.exe" close
 
 # Minimize
@@ -68,18 +69,24 @@ alt + shift + r         : & "C:\Program Files\komorebi\bin\komorebic.exe" retile
 # Pause tiling (alt+p is reserved for resize width decrease)
 alt + shift + p         : & "C:\Program Files\komorebi\bin\komorebic.exe" toggle-pause
 
-# Workspaces: 1,2 on monitor 0 and 3,4 on monitor 1
-# Use monitor-scoped commands so alt+3/4 never create workspaces on monitor 0.
+# Workspaces: 1,3 on monitor 0 and 2,4 on monitor 1
+# Key N always selects workspace N; only its physical monitor changed.
 alt + 1                 : & "C:\Program Files\komorebi\bin\komorebic.exe" focus-monitor-workspace 0 0
-alt + 2                 : & "C:\Program Files\komorebi\bin\komorebic.exe" focus-monitor-workspace 0 1
-alt + 3                 : & "C:\Program Files\komorebi\bin\komorebic.exe" focus-monitor-workspace 1 0
+alt + 2                 : & "C:\Program Files\komorebi\bin\komorebic.exe" focus-monitor-workspace 1 0
+alt + 3                 : & "C:\Program Files\komorebi\bin\komorebic.exe" focus-monitor-workspace 0 1
 alt + 4                 : & "C:\Program Files\komorebi\bin\komorebic.exe" focus-monitor-workspace 1 1
 
 # Move windows across workspaces (same monitor mapping)
 alt + shift + 1         : & "C:\Program Files\komorebi\bin\komorebic.exe" move-to-monitor-workspace 0 0
-alt + shift + 2         : & "C:\Program Files\komorebi\bin\komorebic.exe" move-to-monitor-workspace 0 1
-alt + shift + 3         : & "C:\Program Files\komorebi\bin\komorebic.exe" move-to-monitor-workspace 1 0
+alt + shift + 2         : & "C:\Program Files\komorebi\bin\komorebic.exe" move-to-monitor-workspace 1 0
+alt + shift + 3         : & "C:\Program Files\komorebi\bin\komorebic.exe" move-to-monitor-workspace 0 1
 alt + shift + 4         : & "C:\Program Files\komorebi\bin\komorebic.exe" move-to-monitor-workspace 1 1
+
+# Move windows across workspaces with win+1..4 (Windows taskbar shortcuts)
+win + 1                 : & "C:\Program Files\komorebi\bin\komorebic.exe" move-to-monitor-workspace 0 0
+win + 2                 : & "C:\Program Files\komorebi\bin\komorebic.exe" move-to-monitor-workspace 1 0
+win + 3                 : & "C:\Program Files\komorebi\bin\komorebic.exe" move-to-monitor-workspace 0 1
+win + 4                 : & "C:\Program Files\komorebi\bin\komorebic.exe" move-to-monitor-workspace 1 1
 
 # Next/prev workspace (aerospace: ctrl-w/q -> alt-w/q)
 alt + w                 : & "C:\Program Files\komorebi\bin\komorebic.exe" cycle-workspace next
