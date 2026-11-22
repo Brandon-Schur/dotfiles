@@ -1,4 +1,16 @@
-﻿#Requires AutoHotkey v2.0-a
+﻿#Requires AutoHotkey v2.0
+#SingleInstance Force
+
+;============================================================
+; Komorebi workspaces
+;============================================================
+
+; Explorer owns win+1..4 before whkd can see them, so handle these here.
+; Workspaces: 1,3 on monitor 0 and 2,4 on monitor 1 (key N = workspace N).
+#1::Run('"C:\Program Files\komorebi\bin\komorebic.exe" move-to-monitor-workspace 0 0', , "Hidden")
+#2::Run('"C:\Program Files\komorebi\bin\komorebic.exe" move-to-monitor-workspace 1 0', , "Hidden")
+#3::Run('"C:\Program Files\komorebi\bin\komorebic.exe" move-to-monitor-workspace 0 1', , "Hidden")
+#4::Run('"C:\Program Files\komorebi\bin\komorebic.exe" move-to-monitor-workspace 1 1', , "Hidden")
 
 
 #h:: {
@@ -62,8 +74,8 @@ return
 ; F10 is used as the AHK mouse modifier.
 ;============================================================
 
-#Requires AutoHotkey v2.0
 #HotIf WinActive("ahk_exe RelicCardinal.exe")
+HotIfWinActive "ahk_exe RelicCardinal.exe" ; #HotIf only applies to :: hotkeys; HotIfWinActive scopes Hotkey() calls
 
 ;------------------------------------------------------------
 ; Space behaves as Shift
@@ -182,5 +194,7 @@ HandleControlGroup(key, *)
 {
     Send("^" . key)
 }
+
+HotIfWinActive ; Reset runtime context so later dynamic hotkeys are global
 
 #HotIf

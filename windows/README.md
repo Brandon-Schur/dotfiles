@@ -20,7 +20,6 @@ Copy the files in this folder to:
 ```
 komorebi/komorebi.json            -> C:\Users\Brandon\komorebi.json
 whkd/whkdrc                       -> C:\Users\Brandon\.config\whkdrc
-autohotkey/win-workspaces.ahk     -> C:\Users\Brandon\.config\autohotkey\win-workspaces.ahk
 autohotkey/main.ahk               -> C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\main.ahk
 yasb/config.yaml                  -> C:\Users\Brandon\.config\yasb\config.yaml
 yasb/styles.css                   -> C:\Users\Brandon\.config\yasb\styles.css
@@ -38,7 +37,6 @@ Shortcuts in `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup`:
 | `yasb.lnk` | `C:\Program Files\YASB\yasb.exe` | — |
 | `watch-whkd.lnk` | `powershell.exe` | `-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ...\whkd\watch-whkd.ps1` |
 | `game-hotkey-guard.lnk` | `powershell.exe` | `-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ...\whkd\game-hotkey-guard.ps1` |
-| `win-workspaces.lnk` | `C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe` | `...\autohotkey\win-workspaces.ahk` |
 
 The original global script is not a shortcut: `main.ahk` sits directly in the
 **all-users** Startup folder (`C:\ProgramData\Microsoft\Windows\Start Menu\
@@ -116,7 +114,7 @@ are on monitor 1. The number identifies the workspace, not a slot on a
 monitor — `alt+2` focuses workspace `2` on monitor 1.
 
 Explorer claims `win+1..4` for taskbar app switching before whkd can see
-them, so `autohotkey/win-workspaces.ahk` intercepts those combos and calls
+them, so `autohotkey/main.ahk` intercepts those combos and calls
 `komorebic move-to-monitor-workspace` directly. `DisabledHotkeys = 1234` is
 also set under `HKCU\...\Explorer\Advanced` to stop Explorer claiming them;
 **sign out and back in** after first applying that registry value. `win+q`
@@ -134,8 +132,8 @@ aliases. Stacking and the shortcuts overlay are also bound in `whkdrc`.
 `.ahk` file in the **all-users** Startup folder
 (`C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\main.ahk`),
 where Windows launches it at logon through the registered `.ahk` association
-(`AutoHotkeyUX.exe` -> `AutoHotkey64.exe`). It runs alongside
-`win-workspaces.ahk`; the two scripts have no overlapping hotkeys.
+(`AutoHotkeyUX.exe` -> `AutoHotkey64.exe`). It is the only AHK script; the
+`win+1..4` workspace bindings were merged into it.
 
 | Keys | Action |
 | --- | --- |
@@ -146,6 +144,7 @@ where Windows launches it at logon through the registered `.ahk` association
 | `win+s` | Focus or launch Steam |
 | `win+x` | Focus or launch Spotify |
 | `win+ctrl+x` | Send window to next monitor (`win+shift+right`) |
+| `win+1..4` | Move window to matching Komorebi workspace |
 | `alt+shift+z` | Close window (`alt+F4`) |
 
 The second half of the script is an Age of Empires IV block guarded by
@@ -180,3 +179,55 @@ Edit `$game` in the guard script to target a different executable.
   focused workspace and shows `⛶` while it is monocle/fullscreen.
 - Clock uses 12-hour time (`%I:%M %p`) on the bar and in the hover label.
 - GPU utilization widget.
+
+## Stream Deck — Game Hub (Windows)
+
+The Windows Stream Deck replaces the macOS work deck with a gaming deck. The source project
+lives at `C:\Users\Brandon\Documents\Main\streamdeck`; this section records the setup steps.
+
+1. Requirements: Stream Deck 7.1+, Steam, Discord, Spotify, the **Hue Sync desktop app**, and
+   Node.js/npm for rebuilding.
+
+2. Build and install the plugin/profile:
+
+   ```powershell
+   cd C:\Users\Brandon\Documents\Main\streamdeck
+   .\build.ps1
+   ```
+
+   This builds the icons/profile, installs the plugin, restarts Stream Deck, and switches to the
+   *Game Hub* profile automatically.
+
+3. Hue Sync: make sure `C:\Program Files\Hue Sync\HueSync.exe` is running, then confirm
+   `%APPDATA%\HueSync\config.json` has:
+
+   ```json
+   "App": {
+     "PublicControlEnabled": true,
+     "PublicControlPort": 24851
+   }
+   ```
+
+   Restart Hue Sync, then Stream Deck, so the Elgato Hue Sync plugin reconnects. A backup of the
+   original config is saved as `config.json.gamehub-backup`.
+
+4. Spotify (one time): an existing Spotify app Client ID can be reused, but add this exact
+   redirect URI to that app in the Spotify dashboard first:
+
+   ```text
+   http://127.0.0.1:4202
+   ```
+
+   Then log in:
+
+   ```powershell
+   cd $env:APPDATA\Elgato\StreamDeck\Plugins\com.bschur.gamehub.sdPlugin
+   node bin\spotify-api.js login <client id>
+   ```
+
+   The token is stored in `%APPDATA%\streamdeck-spotify\token.json` and renews automatically.
+   The playlist picker works from `playlists.json` before login; the song picker needs the token.
+
+5. Keys: **Discord** press = open/focus, hold = mute, double-tap = deafen; **Games** = Steam
+   recents; **Refresh** = rescan games; **WoW Forever** is pinned; **♪ Music** tap = song picker
+   and hold ≥ 0.5 s = playlist picker. Hue Sync is the top-row 4th key and is unrelated to Refresh.

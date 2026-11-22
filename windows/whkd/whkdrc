@@ -58,7 +58,6 @@ alt + shift + t         : & "C:\Program Files\komorebi\bin\komorebic.exe" toggle
 
 # Fullscreen/monocle
 alt + f                 : & "C:\Program Files\komorebi\bin\komorebic.exe" toggle-monocle
-ctrl + f                : & "C:\Program Files\komorebi\bin\komorebic.exe" toggle-monocle
 
 # Orientation toggle
 alt + v                 : & "C:\Program Files\komorebi\bin\komorebic.exe" flip-layout vertical
