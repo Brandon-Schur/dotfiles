@@ -21,6 +21,7 @@ Copy the files in this folder to:
 komorebi/komorebi.json            -> C:\Users\Brandon\komorebi.json
 whkd/whkdrc                       -> C:\Users\Brandon\.config\whkdrc
 autohotkey/win-workspaces.ahk     -> C:\Users\Brandon\.config\autohotkey\win-workspaces.ahk
+autohotkey/main.ahk               -> C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\main.ahk
 yasb/config.yaml                  -> C:\Users\Brandon\.config\yasb\config.yaml
 yasb/styles.css                   -> C:\Users\Brandon\.config\yasb\styles.css
 ```
@@ -38,6 +39,11 @@ Shortcuts in `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup`:
 | `watch-whkd.lnk` | `powershell.exe` | `-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ...\whkd\watch-whkd.ps1` |
 | `game-hotkey-guard.lnk` | `powershell.exe` | `-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ...\whkd\game-hotkey-guard.ps1` |
 | `win-workspaces.lnk` | `C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe` | `...\autohotkey\win-workspaces.ahk` |
+
+The original global script is not a shortcut: `main.ahk` sits directly in the
+**all-users** Startup folder (`C:\ProgramData\Microsoft\Windows\Start Menu\
+Programs\Startup\main.ahk`) and is launched via the registered `.ahk`
+association. See [Global hotkeys](#global-hotkeys-mainahk).
 
 `komorebic start --whkd` starts Komorebi and whkd; `watch-whkd.ps1` restarts
 whkd if it exits mid-session (only after Komorebi is running), so hotkeys
@@ -121,6 +127,32 @@ Komorebi's Grid layout ignores `resize-axis`, so all resize keys call
 `whkd/resize-grid.ps1`, which adjusts the focused workspace's grid column/row
 ratios in small steps. The old `+`/`-` resize bindings are still available as
 aliases. Stacking and the shortcuts overlay are also bound in `whkdrc`.
+
+## Global hotkeys (main.ahk)
+
+`autohotkey/main.ahk` is the original global AHK script. It lives as a raw
+`.ahk` file in the **all-users** Startup folder
+(`C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\main.ahk`),
+where Windows launches it at logon through the registered `.ahk` association
+(`AutoHotkeyUX.exe` -> `AutoHotkey64.exe`). It runs alongside
+`win-workspaces.ahk`; the two scripts have no overlapping hotkeys.
+
+| Keys | Action |
+| --- | --- |
+| `win+h` | Hibernate (`SetSuspendState` with hibernate) |
+| `win+shift+h` | Sleep (`SetSuspendState` without hibernate) |
+| `win+e` | Focus or launch File Pilot (`FPilot.exe`) instead of Explorer |
+| `win+w` | Focus or launch Vivaldi |
+| `win+s` | Focus or launch Steam |
+| `win+x` | Focus or launch Spotify |
+| `win+ctrl+x` | Send window to next monitor (`win+shift+right`) |
+| `alt+shift+z` | Close window (`alt+F4`) |
+
+The second half of the script is an Age of Empires IV block guarded by
+`#HotIf WinActive("ahk_exe RelicCardinal.exe")`: Space behaves as Shift,
+backslash as Space, and `Ctrl`/`F10` + number/focus keys bind control groups.
+These only fire while the game is focused. The game guard stops **whkd** while
+the game runs, but it does not stop AHK, so these in-game bindings keep working.
 
 ## Gaming (disabling hotkeys)
 
