@@ -55,6 +55,11 @@ $script:excludedClasses = @(
     'XamlWindow', 'Windows.UI.Core.CoreWindow', 'CEF-OSC-WIDGET', 'CEFCLIENT'
 )
 $script:yasbIds = @()
+# WoW's fullscreen-windowed mode is a normal overlapped window, not WS_POPUP,
+# so the generic immersive test misses it. These processes get a coverage-based
+# exemption when they fill most of a monitor.
+$script:immersiveProcessNames = @('Wow', 'WowClassic', 'Wow-64', 'WoW')
+$script:immersiveIds = @()
 
 function Write-WatchLog([string]$message) {
     "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') $message" | Out-File -FilePath $log -Append -Encoding ascii
@@ -159,6 +164,14 @@ function Test-ImmersiveWindow([IntPtr]$hWnd) {
     # Maximized windows are always immersive.
     if ([YasbBarWatchWin32]::IsZoomed($hWnd)) { return $true }
 
+    # Fullscreen games whose window style is not WS_POPUP still deserve the
+    # whole monitor. Require 80% coverage so small windowed instances do not
+    # hide the bar.
+    if ($script:immersiveIds -contains $wpid -and
+        $winW -ge ($monW * 0.8) -and $winH -ge ($monH * 0.8)) {
+        return $true
+    }
+
     # A window that merely covers its monitor only counts when it is a WS_POPUP
     # window (true borderless fullscreen). This keeps a normal near-fullscreen
     # window (editor, browser) from accidentally hiding the bar.
@@ -172,15 +185,22 @@ function Test-ImmersiveWindow([IntPtr]$hWnd) {
 
 function Get-ImmersiveMonitors {
     $script:filled = @{}
+    $script:gameFilled = @{}
     $cb = [YasbBarWatchWin32+EnumProc] {
         param($hWnd, $data)
         if (Test-ImmersiveWindow $hWnd) {
-            $script:filled[[YasbBarWatchWin32]::MonitorFromWindow($hWnd, 2)] = $true
+            $hMon = [YasbBarWatchWin32]::MonitorFromWindow($hWnd, 2)
+            $script:filled[$hMon] = $true
+            $wpid = 0
+            [void][YasbBarWatchWin32]::GetWindowThreadProcessId($hWnd, [ref]$wpid)
+            if ($script:immersiveIds -contains $wpid) {
+                $script:gameFilled[$hMon] = $true
+            }
         }
         return $true
     }
     [void][YasbBarWatchWin32]::EnumWindows($cb, [IntPtr]::Zero)
-    return $script:filled
+    return @{ All = $script:filled; Game = $script:gameFilled }
 }
 
 $screens = Get-Screens
@@ -195,6 +215,7 @@ while ($true) {
         $yasb = Get-Process -Name yasb -ErrorAction SilentlyContinue | Select-Object -First 1
         $yasbId = if ($yasb) { $yasb.Id } else { 0 }
         $script:yasbIds = @(Get-Process -Name yasb -ErrorAction SilentlyContinue | ForEach-Object { $_.Id })
+        $script:immersiveIds = @(Get-Process -Name $script:immersiveProcessNames -ErrorAction SilentlyContinue | ForEach-Object { $_.Id })
         if ($screens.Count -eq 0) { $screens = Get-Screens }
 
         if ($yasbId -ne $lastYasbId) {
@@ -205,17 +226,27 @@ while ($true) {
         }
 
         if ($yasbId -ne 0) {
-            $filled = Get-ImmersiveMonitors
+            $immersive = Get-ImmersiveMonitors
+            $filled = $immersive.All
             $fg = [YasbBarWatchWin32]::GetForegroundWindow()
             $fgMonitor = [IntPtr]::Zero
             if (Test-ImmersiveWindow $fg) {
                 $fgMonitor = [YasbBarWatchWin32]::MonitorFromWindow($fg, 2)
             }
 
-            # Only the focused immersive window can select a monitor. Otherwise
-            # stay with the current one while its immersive window still exists.
-            # No arbitrary fallback, so the second monitor is never grabbed.
-            if ($fgMonitor -ne [IntPtr]::Zero -and $filled[$fgMonitor]) {
+            $gameMonitor = [IntPtr]::Zero
+            foreach ($hMon in $immersive.Game.Keys) {
+                $gameMonitor = $hMon
+                break
+            }
+
+            # A known fullscreen game gets priority even when it is not focused;
+            # otherwise only the focused immersive window can select a monitor.
+            # Stay with the current one while its immersive window still exists.
+            if ($gameMonitor -ne [IntPtr]::Zero) {
+                $target = $gameMonitor
+            }
+            elseif ($fgMonitor -ne [IntPtr]::Zero -and $filled[$fgMonitor]) {
                 $target = $fgMonitor
             }
             elseif ($activeHandle -ne [IntPtr]::Zero -and $filled[$activeHandle]) {
