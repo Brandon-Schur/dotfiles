@@ -14,8 +14,14 @@
 
 $ErrorActionPreference = 'SilentlyContinue'
 
+# The logon launcher, the Startup-folder fallback, and the watchdog can all
+# try to start this script. Only the first instance is allowed to run.
+$script:mutex = New-Object System.Threading.Mutex($false, 'Local\YasbBarWatch')
+if (-not $script:mutex.WaitOne(0)) { exit }
+
 $log = 'C:\Users\Brandon\.config\yasb\yasb-bar-watch.log'
 $yasbc = 'C:\Program Files\YASB\yasbc.exe'
+$komorebic = 'C:\Program Files\komorebi\bin\komorebic.exe'
 $pauseFile = 'C:\Users\Brandon\.config\yasb\yasb-bar-watch.pause'
 $intervalMs = 700
 $switchDwellTicks = 3          # ~2.1s of stable focus before switching monitors
@@ -108,6 +114,17 @@ function Test-Reservation([IntPtr]$hMonitor) {
         $mi.rcWork.Right -eq $mi.rcMonitor.Right -and
         $mi.rcWork.Bottom -eq $mi.rcMonitor.Bottom
     )
+}
+
+# Komorebi caches each monitor's work area. When YASB adds/removes an app-bar
+# reservation, retile alone keeps the old rectangle, so windows keep covering
+# the bar. Re-applying the static config makes komorebi re-read the work area.
+function Update-KomorebiWorkArea([string]$Reason) {
+    Start-Sleep -Milliseconds 250
+    $config = & $komorebic configuration 2>$null
+    if (-not $config) { return }
+    & $komorebic replace-configuration $config 2>$null | Out-Null
+    Write-WatchLog "komorebi work area refreshed ($Reason)"
 }
 
 function Test-ImmersiveWindow([IntPtr]$hWnd) {
@@ -235,10 +252,12 @@ while ($true) {
                 if ($desiredHidden -and $hasReservation) {
                     & $yasbc hide-bar --screen $s.Name | Out-Null
                     Write-WatchLog "$($s.Name): immersive window; bar hidden"
+                    Update-KomorebiWorkArea "$($s.Name) bar hidden"
                 }
                 elseif (-not $desiredHidden -and -not $hasReservation) {
                     & $yasbc show-bar --screen $s.Name | Out-Null
                     Write-WatchLog "$($s.Name): no immersive window; bar shown"
+                    Update-KomorebiWorkArea "$($s.Name) bar shown"
                 }
             }
         }

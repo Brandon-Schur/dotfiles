@@ -68,10 +68,14 @@ return
 ;============================================================
 ; AoE4 Simple Hotkey Script
 ;
-; Logitech:
-;   XButton2 -> F10
+; See README.md in C:\Users\Brandon\Documents\dotfiles\windows\autohotkey
+; for bindings, Logitech button mapping, and maintenance notes.
 ;
-; F10 is used as the AHK mouse modifier.
+; Logitech:
+;   lower thumb button -> F8 (smart add)
+;   forward side button -> Ctrl
+;   back side button -> MouseX1 (left untouched for AoE4)
+;   Esc -> F9
 ;============================================================
 
 #HotIf WinActive("ahk_exe RelicCardinal.exe")
@@ -116,7 +120,10 @@ for key in CtrlNumberKeys
 
 HandleCtrlNumber(key, *)
 {
-    global CtrlGroupsArmed
+    global CtrlGroupsArmed, LastGroup
+
+    ; Ctrl+N assigns to group N, so N is now the "last group" too.
+    SetLastGroup(key)
 
     ; Remove from all groups only on the first number
     if (!CtrlGroupsArmed)
@@ -155,29 +162,6 @@ HandleCtrlKey(key, *)
 }
 
 ;------------------------------------------------------------
-; Keys that trigger themselves, then focus
-;
-; F9:
-;   1. Send F9
-;   2. Wait 50 ms
-;   3. Send "."
-;------------------------------------------------------------
-
-FocusTriggerKeys := ["F9"]
-
-for key in FocusTriggerKeys
-{
-    Hotkey("$" . key, SendKeyThenFocus.Bind(key))
-}
-
-SendKeyThenFocus(key, *)
-{
-    Send("{" . key . "}")
-    Sleep(10)
-    Send(".")
-}
-
-;------------------------------------------------------------
 ; F10 + Number
 ;
 ; Assign selected units to a control group WITHOUT sending "/"
@@ -192,8 +176,81 @@ for key in ControlGroupKeys
 
 HandleControlGroup(key, *)
 {
+    SetLastGroup(key)
     Send("^" . key)
 }
+
+;------------------------------------------------------------
+; Shift + Middle-click: detach the unit under the cursor
+;
+; Hover a unit on the battlefield, then press Shift+Middle-click:
+;   1. Send "{Click}" is a plain left-click at the cursor. Send
+;      temporarily releases the held Shift, so the unit is
+;      SELECTED instead of being toggled out of your selection.
+;   2. "/" removes the selected unit from ALL control groups.
+;   3. Ctrl+6 assigns it to the raid group.
+; The detached unit stays selected, ready for a right-click raid
+; order. Change RaidGroup below to use a different number.
+;
+; IMPORTANT: clear the in-game "Shift+MouseMiddle" binding
+; ("select all archers on screen") in Age of Empires IV. AHK
+; blocks the middle-click, but AoE4 may still see it via RawInput.
+;
+; Physical Shift only: the Space->Shift remap above will NOT
+; trigger this macro.
+;------------------------------------------------------------
+
+RaidGroup := 6
+
+#HotIf WinActive("ahk_exe RelicCardinal.exe") && GetKeyState("Shift", "P")
++MButton:: {
+    global RaidGroup
+    Send("{Click}")            ; select the unit under the cursor
+    Sleep(30)
+    Send("/")                  ; remove it from every control group
+    Sleep(30)
+    Send("^" . RaidGroup)      ; assign it to the raid group
+}
+#HotIf WinActive("ahk_exe RelicCardinal.exe")
+
+;------------------------------------------------------------
+; Smart add: adds the current selection to the last control
+; group you used, via Alt+N.
+;
+; Bare numbers, Ctrl+N and F10+N all update LastGroup.
+; F8 = your lower thumb button, the main smart-add key.
+; F10 is kept as a harmless backup trigger.
+; The back side button is left untouched for AoE4's
+; "cancel last production item" (MouseX1).
+;------------------------------------------------------------
+
+global LastGroup := 1
+
+SetLastGroup(n) {
+    global LastGroup
+    LastGroup := n
+}
+
+TrackGroup(n, *) {
+    SetLastGroup(n)
+}
+
+for key in ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
+{
+    Hotkey("~" . key, TrackGroup.Bind(key))
+}
+
+SmartAdd() {
+    global LastGroup
+    Send("!" . LastGroup)
+}
+
+; Logitech maps the FORWARD side button (XButton2) to F10.
+; Tap F10 = smart add; hold F10 + number = assign group (F10 & N above).
+F10::SmartAdd()
+
+; Lower thumb button (mapped to F8 in Logitech) = smart add.
+F8::SmartAdd()
 
 HotIfWinActive ; Reset runtime context so later dynamic hotkeys are global
 
