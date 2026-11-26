@@ -14,6 +14,10 @@
     "unfocused_border": "Base03",
     "bar_accent": "Base0D"
   },
+  "display_index_preferences": {
+    "0": "HCPW400073",
+    "1": "102NTDV8M602"
+  },
   "monitors": [
     {
       "workspaces": [
