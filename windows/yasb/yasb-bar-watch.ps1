@@ -1,12 +1,13 @@
 # Per-monitor YASB bar visibility, with no game/process list.
 #
 # Hides the bar on the monitor hosting a maximized or borderless-fullscreen
-# window, so the game gets the whole monitor. Other monitors keep their bars.
+# window. YASB runs with windows_app_bar: false, so it reserves no screen space
+# and komorebi always tiles the full monitor. This script only changes whether
+# the bar is drawn; it never changes the work area. Other monitors keep bars.
 # Only one bar is hidden at a time.
 #
-# The bar is changed only when the actual app-bar state differs from the desired
-# state. There is no periodic show-all resync and no arbitrary fallback, so the
-# game resizes exactly once on start and once on exit - never during play.
+# Bar visibility is tracked locally because yasbc has no "query" command. State
+# is reset when YASB restarts, which also refreshes the cached screen handles.
 # A short focus dwell prevents brief focus blips from toggling anything.
 #
 # Use the pause file to suspend the watcher without changing bar state:
@@ -21,7 +22,6 @@ if (-not $script:mutex.WaitOne(0)) { exit }
 
 $log = 'C:\Users\Brandon\.config\yasb\yasb-bar-watch.log'
 $yasbc = 'C:\Program Files\YASB\yasbc.exe'
-$komorebic = 'C:\Program Files\komorebi\bin\komorebic.exe'
 $pauseFile = 'C:\Users\Brandon\.config\yasb\yasb-bar-watch.pause'
 $intervalMs = 700
 $switchDwellTicks = 3          # ~2.1s of stable focus before switching monitors
@@ -107,31 +107,6 @@ function Get-Screens {
     return $script:screensForHandles
 }
 
-# True when a monitor has a live app-bar reservation. This is the actual state
-# we compare against, so commands are issued only on real transitions.
-function Test-Reservation([IntPtr]$hMonitor) {
-    $mi = New-Object YasbBarWatchWin32+MONITORINFO
-    $mi.cbSize = [System.Runtime.InteropServices.Marshal]::SizeOf($mi)
-    if (-not [YasbBarWatchWin32]::GetMonitorInfo($hMonitor, [ref]$mi)) { return $true }
-    return -not (
-        $mi.rcWork.Left -eq $mi.rcMonitor.Left -and
-        $mi.rcWork.Top -eq $mi.rcMonitor.Top -and
-        $mi.rcWork.Right -eq $mi.rcMonitor.Right -and
-        $mi.rcWork.Bottom -eq $mi.rcMonitor.Bottom
-    )
-}
-
-# Komorebi caches each monitor's work area. When YASB adds/removes an app-bar
-# reservation, retile alone keeps the old rectangle, so windows keep covering
-# the bar. Re-applying the static config makes komorebi re-read the work area.
-function Update-KomorebiWorkArea([string]$Reason) {
-    Start-Sleep -Milliseconds 250
-    $config = & $komorebic configuration 2>$null
-    if (-not $config) { return }
-    & $komorebic replace-configuration $config 2>$null | Out-Null
-    Write-WatchLog "komorebi work area refreshed ($Reason)"
-}
-
 function Test-ImmersiveWindow([IntPtr]$hWnd) {
     if ($hWnd -eq [IntPtr]::Zero) { return $false }
     if (-not [YasbBarWatchWin32]::IsWindowVisible($hWnd)) { return $false }
@@ -209,6 +184,7 @@ $hasCandidate = $false
 $candidateHandle = [IntPtr]::Zero
 $candidateTicks = 0
 $lastYasbId = 0
+$script:barHidden = @{}
 
 while ($true) {
     if (-not (Test-Path $pauseFile)) {
@@ -219,10 +195,16 @@ while ($true) {
         if ($screens.Count -eq 0) { $screens = Get-Screens }
 
         if ($yasbId -ne $lastYasbId) {
-            # A fresh YASB may have reset bar state; let the state checks below
-            # reconcile it without a blind show-all.
+            # A fresh YASB shows all bars and may re-number screens. Refresh the
+            # cached handles and reset local visibility state so nothing is left
+            # stuck in the old state.
             $lastYasbId = $yasbId
-            if ($yasbId -ne 0) { Write-WatchLog "YASB process $yasbId; re-evaluating bars" }
+            if ($yasbId -ne 0) {
+                Write-WatchLog "YASB process $yasbId; re-evaluating bars"
+                $screens = Get-Screens
+                $script:barHidden = @{}
+                foreach ($s in $screens) { $script:barHidden[$s.Name] = $false }
+            }
         }
 
         if ($yasbId -ne 0) {
@@ -278,17 +260,17 @@ while ($true) {
             foreach ($s in $screens) {
                 if ($s.Handle -eq [IntPtr]::Zero) { continue }
                 $desiredHidden = ($activeHandle -ne [IntPtr]::Zero -and $s.Handle -eq $activeHandle)
-                $hasReservation = Test-Reservation $s.Handle
+                $isHidden = [bool]$script:barHidden[$s.Name]
 
-                if ($desiredHidden -and $hasReservation) {
+                if ($desiredHidden -and -not $isHidden) {
                     & $yasbc hide-bar --screen $s.Name | Out-Null
+                    $script:barHidden[$s.Name] = $true
                     Write-WatchLog "$($s.Name): immersive window; bar hidden"
-                    Update-KomorebiWorkArea "$($s.Name) bar hidden"
                 }
-                elseif (-not $desiredHidden -and -not $hasReservation) {
+                elseif (-not $desiredHidden -and $isHidden) {
                     & $yasbc show-bar --screen $s.Name | Out-Null
+                    $script:barHidden[$s.Name] = $false
                     Write-WatchLog "$($s.Name): no immersive window; bar shown"
-                    Update-KomorebiWorkArea "$($s.Name) bar shown"
                 }
             }
         }
