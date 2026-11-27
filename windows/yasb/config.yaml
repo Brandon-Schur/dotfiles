@@ -10,7 +10,7 @@ bars:
   primary-bar:
     enabled: true
     screens:
-    - '*'
+    - Odyssey G7
     class_name: yasb-bar
     alignment:
       position: top
@@ -27,6 +27,51 @@ bars:
       always_on_top: true
       windows_app_bar: false
       hide_on_fullscreen: true
+    dimensions:
+      width: 100%
+      height: 34
+    padding:
+      top: 1
+      left: 1
+      bottom: 1
+      right: 1
+    widgets:
+      left:
+      - home
+      - quick_launch
+      - komorebi_workspaces
+      - pause_status
+      - fullscreen_status
+      - active_window
+      center:
+      - clock
+      right:
+      - cpu
+      - gpu
+      - memory
+      - volume
+      - notifications
+      - power_menu
+  secondary-bar:
+    enabled: true
+    screens:
+    - LG HDR QHD
+    class_name: yasb-bar
+    alignment:
+      position: top
+      align: center
+    animation:
+      enabled: true
+      duration: 300
+    blur_effect:
+      enabled: true
+      round_corners: true
+      round_corners_type: normal
+      border_color: system
+    window_flags:
+      always_on_top: false
+      windows_app_bar: true
+      hide_on_fullscreen: false
     dimensions:
       width: 100%
       height: 34

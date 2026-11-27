@@ -185,6 +185,7 @@ $candidateHandle = [IntPtr]::Zero
 $candidateTicks = 0
 $lastYasbId = 0
 $script:barHidden = @{}
+$script:settleUntil = [datetime]::MinValue
 
 while ($true) {
     if (-not (Test-Path $pauseFile)) {
@@ -204,7 +205,15 @@ while ($true) {
                 $screens = Get-Screens
                 $script:barHidden = @{}
                 foreach ($s in $screens) { $script:barHidden[$s.Name] = $false }
+                # A fresh YASB creates its bar windows after the CLI is ready.
+                # Wait before issuing hide/show so commands are not lost.
+                $script:settleUntil = (Get-Date).AddSeconds(3)
             }
+        }
+
+        if ((Get-Date) -lt $script:settleUntil) {
+            Start-Sleep -Milliseconds $intervalMs
+            continue
         }
 
         if ($yasbId -ne 0) {
