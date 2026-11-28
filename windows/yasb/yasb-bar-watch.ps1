@@ -1,10 +1,11 @@
 # Per-monitor YASB bar visibility, with no game/process list.
 #
 # Hides the bar on the monitor hosting a maximized or borderless-fullscreen
-# window. YASB runs with windows_app_bar: false, so it reserves no screen space
-# and komorebi always tiles the full monitor. This script only changes whether
-# the bar is drawn; it never changes the work area. Other monitors keep bars.
-# Only one bar is hidden at a time.
+# window. The primary bar runs with windows_app_bar: false so games can use the
+# whole monitor; while that bar is visible, this script applies the equivalent
+# komorebi work-area offset so normal windows still start below it. The offset
+# is removed when the bar hides. The secondary bar reserves space through
+# Windows itself. Only one bar is hidden at a time.
 #
 # Bar visibility is tracked locally because yasbc has no "query" command. State
 # is reset when YASB restarts, which also refreshes the cached screen handles.
@@ -22,6 +23,7 @@ if (-not $script:mutex.WaitOne(0)) { exit }
 
 $log = 'C:\Users\Brandon\.config\yasb\yasb-bar-watch.log'
 $yasbc = 'C:\Program Files\YASB\yasbc.exe'
+$komorebic = 'C:\Program Files\komorebi\bin\komorebic.exe'
 $pauseFile = 'C:\Users\Brandon\.config\yasb\yasb-bar-watch.pause'
 $intervalMs = 700
 $switchDwellTicks = 3          # ~2.1s of stable focus before switching monitors
@@ -63,6 +65,17 @@ $script:immersiveIds = @()
 
 function Write-WatchLog([string]$message) {
     "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') $message" | Out-File -FilePath $log -Append -Encoding ascii
+}
+
+# The primary bar does not reserve space through Windows, so komorebi would
+# tile normal windows underneath it. Reproduce the old reserved band with a
+# runtime work-area offset while the bar is visible. 54 physical px is 36
+# logical px on this 150%-scaled monitor; equal top/bottom keeps padding even.
+function Set-PrimaryWorkAreaOffset([bool]$BarHidden, [bool]$Force = $false) {
+    $offset = if ($BarHidden) { 0 } else { 54 }
+    if (-not $Force -and $script:primaryOffset -eq $offset) { return }
+    & $komorebic monitor-work-area-offset 0 0 $offset 0 $offset 2>$null | Out-Null
+    $script:primaryOffset = $offset
 }
 
 # Screen names and monitor handles come from YASB and Win32 respectively.
@@ -184,7 +197,9 @@ $hasCandidate = $false
 $candidateHandle = [IntPtr]::Zero
 $candidateTicks = 0
 $lastYasbId = 0
+$lastKomorebiId = 0
 $script:barHidden = @{}
+$script:primaryOffset = $null
 $script:settleUntil = [datetime]::MinValue
 
 while ($true) {
@@ -194,6 +209,17 @@ while ($true) {
         $script:yasbIds = @(Get-Process -Name yasb -ErrorAction SilentlyContinue | ForEach-Object { $_.Id })
         $script:immersiveIds = @(Get-Process -Name $script:immersiveProcessNames -ErrorAction SilentlyContinue | ForEach-Object { $_.Id })
         if ($screens.Count -eq 0) { $screens = Get-Screens }
+
+        $komorebi = Get-Process -Name komorebi -ErrorAction SilentlyContinue | Select-Object -First 1
+        $komorebiId = if ($komorebi) { $komorebi.Id } else { 0 }
+        if ($komorebiId -ne $lastKomorebiId) {
+            $lastKomorebiId = $komorebiId
+            if ($komorebiId -ne 0) {
+                # A fresh komorebi loses runtime offsets, so re-apply the one
+                # that matches the current primary bar state.
+                Set-PrimaryWorkAreaOffset -BarHidden ([bool]$script:barHidden['Odyssey G7']) -Force $true
+            }
+        }
 
         if ($yasbId -ne $lastYasbId) {
             # A fresh YASB shows all bars and may re-number screens. Refresh the
@@ -205,6 +231,9 @@ while ($true) {
                 $screens = Get-Screens
                 $script:barHidden = @{}
                 foreach ($s in $screens) { $script:barHidden[$s.Name] = $false }
+                # A fresh YASB shows its bar, so reserve space again until an
+                # immersive window proves otherwise.
+                Set-PrimaryWorkAreaOffset -BarHidden $false
                 # A fresh YASB creates its bar windows after the CLI is ready.
                 # Wait before issuing hide/show so commands are not lost.
                 $script:settleUntil = (Get-Date).AddSeconds(3)
@@ -274,11 +303,13 @@ while ($true) {
                 if ($desiredHidden -and -not $isHidden) {
                     & $yasbc hide-bar --screen $s.Name | Out-Null
                     $script:barHidden[$s.Name] = $true
+                    if ($s.Name -eq 'Odyssey G7') { Set-PrimaryWorkAreaOffset -BarHidden $true }
                     Write-WatchLog "$($s.Name): immersive window; bar hidden"
                 }
                 elseif (-not $desiredHidden -and $isHidden) {
                     & $yasbc show-bar --screen $s.Name | Out-Null
                     $script:barHidden[$s.Name] = $false
+                    if ($s.Name -eq 'Odyssey G7') { Set-PrimaryWorkAreaOffset -BarHidden $false }
                     Write-WatchLog "$($s.Name): no immersive window; bar shown"
                 }
             }
